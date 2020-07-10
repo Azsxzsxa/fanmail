@@ -89,7 +89,7 @@ function loadMessages(normalUserUid,powerUserUid) {
   });
 }
 
-//load influencers
+//load influencers on UI
 function loadSuperUsers() {
   // Create the query to load the last 12 messages and listen for new ones.
   var query = firebase.firestore()
