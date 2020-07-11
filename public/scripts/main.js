@@ -22,6 +22,20 @@ function signIn() {
   firebase.auth().signInWithPopup(provider);
 }
 
+function signInEmail(){
+  // var email = signInEmailInput.value;
+  // var password = signInPassInput.value;
+
+
+
+  firebase.auth().signInWithEmailAndPassword(email, password).catch(function(error) {
+    // Handle Errors here.
+    var errorCode = error.code;
+    var errorMessage = error.message;
+    window.alert("error"+email+password +error.code + errorMessage);
+  });
+}
+
 // Signs-out of Friendly Chat.
 function signOut() {
   // Sign out of Firebase.
@@ -206,6 +220,7 @@ function onMessageFormSubmit(e) {
 function authStateObserver(user) {
   if (user) { // User is signed in!
     // Get the signed-in user's profile pic and name.
+    window.alert("successful login");
     var profilePicUrl = getProfilePicUrl();
     var userName = getUserName();
     userUid = user.uid;
@@ -230,6 +245,7 @@ function authStateObserver(user) {
     saveMessagingDeviceToken();
   } else { // User is signed out!
     // Hide user's profile and sign-out button.
+    window.alert("fail login");
     userNameElement.setAttribute('hidden', 'true');
     userPicElement.setAttribute('hidden', 'true');
     signOutButtonElement.setAttribute('hidden', 'true');
@@ -474,11 +490,17 @@ var userIdElement = document.getElementById('user-uid');
 var signInButtonElement = document.getElementById('sign-in');
 var signOutButtonElement = document.getElementById('sign-out');
 var signInSnackbarElement = document.getElementById('must-signin-snackbar');
+var signInEmail = document.getElementById('sign-in email');
+
+var signInEmailSubmit = document.getElementById('submitLogField');
+var signInEmailInput = document.getElementById('emailLogField');
+var signInPassInput = document.getElementById('passLogField');
 
 // Saves message on form submit.
 messageFormElement.addEventListener('submit', onMessageFormSubmit);
 signOutButtonElement.addEventListener('click', signOut);
 signInButtonElement.addEventListener('click', signIn);
+// signInEmailSubmit.addEventListener('click',signInEmail);
 
 // Toggle for the button.
 messageInputElement.addEventListener('keyup', toggleButton);
@@ -486,6 +508,24 @@ messageInputElement.addEventListener('change', toggleButton);
 
 var userUid;
 var conversationId;
+
+// var emailLog = "anamere@gmail.com";
+// var passwordLog = "123456"
+
+
+
+
+
+signInEmail.onclick = function(){
+  var emailLog = signInEmailInput.value;
+var passwordLog = signInPassInput.value;
+  firebase.auth().signInWithEmailAndPassword(emailLog, passwordLog).catch(function(error) {
+    // Handle Errors here.
+    var errorCode = error.code;
+    var errorMessage = error.message;
+    window.alert(error.code+error.message);
+  });
+}
 
 // Events for image upload.
 // imageButtonElement.addEventListener('click', function(e) {
@@ -501,4 +541,12 @@ initFirebaseAuth();
 
 // We load currently existing chat messages and listen to new ones.
 // loadMessages();
-loadSuperUsers();
+// loadSuperUsers();
+// firebase.auth().createUserWithEmailAndPassword("anamere@gmail.com", "123456").catch(function(error) {
+//   // Handle Errors here.
+//   var errorCode = error.code;
+//   var errorMessage = error.message;
+//   // ...
+// });
+
+
