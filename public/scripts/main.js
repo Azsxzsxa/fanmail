@@ -220,7 +220,6 @@ function onMessageFormSubmit(e) {
 function authStateObserver(user) {
   if (user) { // User is signed in!
     // Get the signed-in user's profile pic and name.
-    window.alert("successful login");
     var profilePicUrl = getProfilePicUrl();
     var userName = getUserName();
     userUid = user.uid;
@@ -245,7 +244,6 @@ function authStateObserver(user) {
     saveMessagingDeviceToken();
   } else { // User is signed out!
     // Hide user's profile and sign-out button.
-    window.alert("fail login");
     userNameElement.setAttribute('hidden', 'true');
     userPicElement.setAttribute('hidden', 'true');
     signOutButtonElement.setAttribute('hidden', 'true');
@@ -516,16 +514,16 @@ var conversationId;
 
 
 
-signInEmail.onclick = function(){
-  var emailLog = signInEmailInput.value;
-var passwordLog = signInPassInput.value;
-  firebase.auth().signInWithEmailAndPassword(emailLog, passwordLog).catch(function(error) {
-    // Handle Errors here.
-    var errorCode = error.code;
-    var errorMessage = error.message;
-    window.alert(error.code+error.message);
-  });
-}
+// signInEmail.onclick = function(){
+//   var emailLog = signInEmailInput.value;
+// var passwordLog = signInPassInput.value;
+//   firebase.auth().signInWithEmailAndPassword(emailLog, passwordLog).catch(function(error) {
+//     // Handle Errors here.
+//     var errorCode = error.code;
+//     var errorMessage = error.message;
+//     window.alert(error.code+error.message);
+//   });
+// }
 
 // Events for image upload.
 // imageButtonElement.addEventListener('click', function(e) {
@@ -542,11 +540,6 @@ initFirebaseAuth();
 // We load currently existing chat messages and listen to new ones.
 // loadMessages();
 // loadSuperUsers();
-// firebase.auth().createUserWithEmailAndPassword("anamere@gmail.com", "123456").catch(function(error) {
-//   // Handle Errors here.
-//   var errorCode = error.code;
-//   var errorMessage = error.message;
-//   // ...
-// });
+
 
 
