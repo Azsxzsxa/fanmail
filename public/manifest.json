@@ -1,7 +1,7 @@
 {
   "name": "Fan Mail",
   "short_name": "Fan Mail",
-  "start_url": "/index.html",
+  "start_url": "/html/index.html",
   "display": "standalone",
   "orientation": "portrait",
   "gcm_sender_id": "103953800507"

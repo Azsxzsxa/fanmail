@@ -7,7 +7,7 @@ function addUserToDb(userEmail, userName, userUid) {
     type: 0
   })
     .then(function () {
-      window.location.href = "index.html";
+      window.location.href = "dashboard.html";
     })
     .catch(function (error) {
       window.alert(error);
@@ -23,7 +23,7 @@ function authStateObserver(user) {
     var docRef = firebase.firestore().collection("users").doc(user.uid);
     docRef.get().then(function (doc) {
       if (doc.exists) {
-        window.location.href = "index.html";
+        window.location.href = "dashboard.html";
       } else {
         addUserToDb(user.email, user.displayName, user.uid);
       }
