@@ -54,10 +54,10 @@
   color: #0288d1;
   text-decoration: none;
 }
-.form .register-form {
-  display: none;
-}
-.container {
+/* .form .register-form {
+  display: inline;
+} */
+/* .container {
   position: relative;
   z-index: 1;
   max-width: 300px;
@@ -89,7 +89,7 @@
 }
 .container .info span .fa {
   color: #EF3B3A;
-}
+} */
 body {
   background: #f9fafc; /* fallback for old browsers */
   /* background: -webkit-linear-gradient(right, #76b852, #8DC26F);

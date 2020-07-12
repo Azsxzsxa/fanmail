@@ -150,25 +150,6 @@ function saveMessagingDeviceToken() {
   });
 }
 
-// Add the user to DB
-function addUserToDb(profilePicUrl, userName, userID) {
-
-  var db = firebase.firestore();
-  db.collection("users").doc(userID).set({
-    name: userName,
-    profilePic: profilePicUrl,
-    uid: userID,
-    type: 0
-  })
-    .then(function () {
-      console.log("Document successfully written!");
-    })
-    .catch(function (error) {
-      console.error("Error writing document: ", error);
-    });
-
-}
-
 // Requests permission to show notifications.
 function requestNotificationsPermissions() {
   console.log('Requesting notifications permission...');
@@ -227,18 +208,14 @@ function authStateObserver(user) {
     // Set the user's profile pic and name.
     userPicElement.style.backgroundImage = 'url(' + addSizeToGoogleProfilePic(profilePicUrl) + ')';
     userNameElement.textContent = userName;
-    userIdElement.textContent = userUid;
 
     // Show user's profile and sign-out button.
     userNameElement.removeAttribute('hidden');
     userPicElement.removeAttribute('hidden');
-    userIdElement.removeAttribute('hidden');
     signOutButtonElement.removeAttribute('hidden');
 
     // Hide sign-in button.
     signInButtonElement.setAttribute('hidden', 'true');
-
-    addUserToDb(profilePicUrl, userName, userUid);
 
     // We save the Firebase Messaging Device token and enable notifications.
     saveMessagingDeviceToken();
@@ -484,15 +461,9 @@ var imageFormElement = document.getElementById('image-form');
 var mediaCaptureElement = document.getElementById('mediaCapture');
 var userPicElement = document.getElementById('user-pic');
 var userNameElement = document.getElementById('user-name');
-var userIdElement = document.getElementById('user-uid');
 var signInButtonElement = document.getElementById('sign-in');
 var signOutButtonElement = document.getElementById('sign-out');
 var signInSnackbarElement = document.getElementById('must-signin-snackbar');
-var signInEmail = document.getElementById('sign-in email');
-
-var signInEmailSubmit = document.getElementById('submitLogField');
-var signInEmailInput = document.getElementById('emailLogField');
-var signInPassInput = document.getElementById('passLogField');
 
 // Saves message on form submit.
 messageFormElement.addEventListener('submit', onMessageFormSubmit);
