@@ -50,6 +50,7 @@
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en">
   <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/inbox.css">
 
   <!-- TODO: Enable First Input Delay polyfill library. -->
   <!--  <script type="text/javascript">!function(n,e){var t,o,i,c=[],f={passive:!0,capture:!0},r=new Date,a="pointerup",u="pointercancel";function p(n,c){t||(t=c,o=n,i=new Date,w(e),s())}function s(){o>=0&&o<i-r&&(c.forEach(function(n){n(o,t)}),c=[])}function l(t){if(t.cancelable){var o=(t.timeStamp>1e12?new Date:performance.now())-t.timeStamp;"pointerdown"==t.type?function(t,o){function i(){p(t,o),r()}function c(){r()}function r(){e(a,i,f),e(u,c,f)}n(a,i,f),n(u,c,f)}(o,t):p(o,t)}}function w(n){["click","mousedown","keydown","touchstart","pointerdown"].forEach(function(e){n(e,l,f)})}w(n),self.perfMetrics=self.perfMetrics||{},self.perfMetrics.onFirstInputDelay=function(n){c.push(n),s()}}(addEventListener,removeEventListener);</script> -->
@@ -57,46 +58,23 @@
 </head>
 
 <body>
+  <div class="sidenav">
+  
+    <a href="inbox.html">FANMAIL</a>
+    <a href="inbox.html">INBOX</a>
+    <a href="people.html">PEOPLE</a>
+  </div>
+<div >
   <div class="demo-layout mdl-layout mdl-js-layout mdl-layout--fixed-header">
 
     <!-- Header section containing logo -->
-    <header class="mdl-layout__header mdl-color-text--white mdl-color--light-blue-700">
-      <div class="mdl-cell mdl-cell--12-col mdl-cell--12-col-tablet mdl-grid">
-        <div class="mdl-layout__header-row mdl-cell mdl-cell--12-col mdl-cell--12-col-tablet mdl-cell--12-col-desktop">
-          <h3><i class="material-icons">chat_bubble_outline</i> FanMail</h3>
-        </div>
-        <div id="user-container">
-          <button hidden id="dashboard" onclick="location.href='inbox.html'" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white">
-            Dashboard
-          </button>
-          <button id="people" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white">
-            People
-          </button>
-          <button id="guide" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white">
-            Guide
-          </button>
-          <button id="faq" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white">
-            FAQ
-          </button>
-          <button id="contact" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white">
-            Contact
-          </button>
-          <button hidden id="sign-out" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white">
-            Sign-out
-          </button>
-          <!-- <button id="sign-in" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white">
-            <i class="material-icons">account_circle</i>Sign-in with Google
-          </button> -->
-          <button id="sign-in" onclick="location.href='login.html'" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white">
-            <i class="material-icons">account_circle</i>Sign-in
-          </button>
-        </div>
-      </div>
-      <!-- <li><a href="login.html">Overview</a></li> -->
+    <header>
+
     </header>
 
-    <main class="mdl-layout__content mdl-color--grey-100">
-      <div id="messages-card-container" class="mdl-cell mdl-cell--12-col mdl-grid">
+    <main class="main">
+      <button hidden id="backBtn" >back</button>
+      <div hidden id="messages-card-container" class="mdl-cell mdl-cell--12-col mdl-grid">
 
         <!-- Messages container -->
         <div id="messages-card"
@@ -131,7 +109,7 @@
       </div>
 
       <!-- try-->
-      <div id="messages-card-container" class="mdl-cell mdl-cell--12-col mdl-grid">
+      <div id="pusers-card-container" class="mdl-cell mdl-cell--12-col mdl-grid">
 
         <!-- Messages container -->
         <div id="messages-card"
@@ -181,7 +159,7 @@
   <script src="/__/firebase/7.15.5/firebase-performance.js"></script>
   <script src="/__/firebase/init.js"></script>
 
-  <script src="scripts/main.js"></script>
+  <script src="scripts/people.js"></script>
 </body>
 
 </html>

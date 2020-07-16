@@ -107,24 +107,23 @@ function loadMessages(normalUserUid,powerUserUid) {
 function loadSuperUsers() {
   // Create the query to load the last 12 messages and listen for new ones.
   var query = firebase.firestore()
-    .collection('power-users')
-    .limit(12);
+      .collection('users')
+      .where("type", "==", 1)
+      .limit(12);
 
   query.get()
-    .then(function (querySnapshot) {
-      querySnapshot.forEach(function (doc) {
-        // doc.data() is never undefined for query doc snapshots
-        console.log(doc.id, " => ", doc.data());
-        console.log(doc.data().profilePic);
-        displayPowerUser(doc.id,doc.data().name,"yes sir");
+      .then(function (querySnapshot) {
+          querySnapshot.forEach(function (doc) {
+              // doc.data() is never undefined for query doc snapshots
+              console.log(doc.id, " => ", doc.data());
+              console.log(doc.data().profilePic);
+              displayPowerUser(doc.id, doc.data().name);
 
+          });
+      })
+      .catch(function (error) {
+          console.log("Error getting documents: ", error);
       });
-    })
-    .catch(function (error) {
-      console.log("Error getting documents: ", error);
-    });
-
-
 }
 
 // Saves a new message containing an image in Firebase.
@@ -200,36 +199,36 @@ function onMessageFormSubmit(e) {
 // Triggers when the auth state change for instance when the user signs-in or signs-out.
 function authStateObserver(user) {
   if (user) { // User is signed in!
-    // Get the signed-in user's profile pic and name.
-    var profilePicUrl = getProfilePicUrl();
-    var userName = getUserName();
-    userUid = user.uid;
+      // Get the signed-in user's profile pic and name.
+      //   var profilePicUrl = getProfilePicUrl();
+      //   var userName = getUserName();
+      userUid = user.uid;
 
-    // Set the user's profile pic and name.
-    userPicElement.style.backgroundImage = 'url(' + addSizeToGoogleProfilePic(profilePicUrl) + ')';
-    userNameElement.textContent = userName;
+      // Set the user's profile pic and name.
+      //   userPicElement.style.backgroundImage = 'url(' + addSizeToGoogleProfilePic(profilePicUrl) + ')';
+      //   userNameElement.textContent = userName;
 
-    // Show user's profile and sign-out button.
-    userNameElement.removeAttribute('hidden');
-    userPicElement.removeAttribute('hidden');
-    signOutButtonElement.removeAttribute('hidden');
+      // Show user's profile and sign-out button.
+      //   userNameElement.removeAttribute('hidden');
+      //   userPicElement.removeAttribute('hidden');
+      //   signOutButtonElement.removeAttribute('hidden');
 
-    // Hide sign-in button.
-    signInButtonElement.setAttribute('hidden', 'true');
+      // Hide sign-in button.
+      //   signInButtonElement.setAttribute('hidden', 'true');
 
-    loadSuperUsers();
+      loadSuperUsers();
 
-    // We save the Firebase Messaging Device token and enable notifications.
-    saveMessagingDeviceToken();
+      // We save the Firebase Messaging Device token and enable notifications.
+      //   saveMessagingDeviceToken();
   } else { // User is signed out!
-    // Hide user's profile and sign-out button.
-    // userNameElement.setAttribute('hidden', 'true');
-    // userPicElement.setAttribute('hidden', 'true');
-    // signOutButtonElement.setAttribute('hidden', 'true');
+      // Hide user's profile and sign-out button.
+      // userNameElement.setAttribute('hidden', 'true');
+      // userPicElement.setAttribute('hidden', 'true');
+      // signOutButtonElement.setAttribute('hidden', 'true');
 
-    // Show sign-in button.
-    // signInButtonElement.removeAttribute('hidden');
-    window.location.href = "login.html";
+      // Show sign-in button.
+      // signInButtonElement.removeAttribute('hidden');
+      window.location.href = "login.html";
   }
 }
 
@@ -403,31 +402,33 @@ function displayMessage(id, timestamp, name, text, picUrl, imageUrl) {
 }
 
 // Displays a Message in the UI.
-function displayPowerUser(pUserUid, name,text) {
+function displayPowerUser(pUserUid, name) {
   var div = document.getElementById(pUserUid) || createAndInsertPUser(pUserUid);
   div.querySelector('.name').textContent = name;
+  div.querySelector('.profilePic').src = "profilepic.png";
 
-  div.querySelector('.message').textContent = text;
-  div.querySelector('.message').innerHTML = div.querySelector('.message').innerHTML.replace(/\n/g, '<br>');
+  // div.querySelector('.message').textContent = text;
+  // div.querySelector('.message').innerHTML = div.querySelector('.message').innerHTML.replace(/\n/g, '<br>');
 
 
 
   setTimeout(function () { div.classList.add('visible') }, 1);
   pUserListElement.scrollTop = pUserListElement.scrollHeight;
 
-  div.onclick=function(){
-    onPUserClick(div,pUserUid);
+  div.onclick = function () {
+      onPUserClick(div, pUserUid);
   }
 
-
 }
 
-function onPUserClick(div,id){
+function onPUserClick(div, id) {
   console.log(div);
-  while (messageListElement.firstChild) {
-    messageListElement.firstChild.remove();
-}
-loadMessages(userUid,id);
+  // while (messageListElement.firstChild) {
+  //     messageListElement.firstChild.remove();
+  // }
+  //   loadMessages(userUid,id);
+  peopleContainer.setAttribute('hidden',true);
+  profileContainer.removeAttribute('hidden');
 
 }
 
@@ -484,7 +485,11 @@ var conversationId;
 // var emailLog = "anamere@gmail.com";
 // var passwordLog = "123456"
 
-
+var pUserListElement = document.getElementById('pusers');
+var peopleContainer = document.getElementById('pusers-card-container');
+var profileContainer = document.getElementById('profile-container');
+var userUid;
+var conversationId;
 
 
 
