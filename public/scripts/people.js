@@ -67,7 +67,7 @@ function isUserSignedIn() {
 function saveMessage(messageText) {
   // Add a new message entry to the database.
   console.log(conversationId);
-  return firebase.firestore().collection('data').doc("conversations").collection(conversationId).add({
+  return firebase.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(conversationId).add({
     name: getUserName(),
     text: messageText,
     profilePicUrl: getProfilePicUrl(),
@@ -83,8 +83,8 @@ function loadMessages(normalUserUid, powerUserUid) {
   console.log(powerUserUid);
   conversationId = normalUserUid.concat(powerUserUid);
   var query = firebase.firestore()
-    .collection('data')
-    .doc("conversations")
+    .collection(DB_DATA)
+    .doc(DB_CONVERSATIONS)
     .collection(conversationId)
     .orderBy('timestamp', 'desc')
     .limit(12);
@@ -107,7 +107,7 @@ function loadMessages(normalUserUid, powerUserUid) {
 function loadSuperUsers() {
   // Create the query to load the last 12 messages and listen for new ones.
   var query = firebase.firestore()
-    .collection('users')
+    .collection(DB_USERS)
     .where("type", "==", 1)
     .limit(12);
 
@@ -193,10 +193,10 @@ function onMessageFormSubmit(e) {
       resetMaterialTextfield(messageInputElement);
       toggleButton();
 
-      var docRef = firebase.firestore().collection("users").doc(userUid).collection("conversations");
-      docRef.doc(powerUserUid).get().then(function (doc) {
-        var senderRef = firebase.firestore().collection("users").doc(userUid).collection("conversations").doc(powerUserUid);
-        var receiverRef = firebase.firestore().collection("users").doc(powerUserUid).collection("conversations").doc(userUid);
+      var docRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(powerUserUid);
+      docRef.get().then(function (doc) {
+        var senderRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(powerUserUid);
+        var receiverRef = firebase.firestore().collection(DB_USERS).doc(powerUserUid).collection(DB_CONVERSATIONS).doc(userUid);
         if (doc.exists) {
           var receiverSend = userUid.localeCompare(doc.data().receiverUid);
           //0 means equal

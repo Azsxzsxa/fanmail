@@ -22,17 +22,17 @@ function signIn() {
   firebase.auth().signInWithPopup(provider);
 }
 
-function signInEmail(){
+function signInEmail() {
   // var email = signInEmailInput.value;
   // var password = signInPassInput.value;
 
 
 
-  firebase.auth().signInWithEmailAndPassword(email, password).catch(function(error) {
+  firebase.auth().signInWithEmailAndPassword(email, password).catch(function (error) {
     // Handle Errors here.
     var errorCode = error.code;
     var errorMessage = error.message;
-    window.alert("error"+email+password +error.code + errorMessage);
+    window.alert("error" + email + password + error.code + errorMessage);
   });
 }
 
@@ -78,7 +78,7 @@ function saveMessage(messageText) {
 }
 
 // Loads chat messages history and listens for upcoming ones.
-function loadMessages(normalUserUid,powerUserUid) {
+function loadMessages(normalUserUid, powerUserUid) {
   // Create the query to load the last 12 messages and listen for new ones.
   console.log(powerUserUid);
   conversationId = normalUserUid.concat(powerUserUid);
@@ -107,23 +107,23 @@ function loadMessages(normalUserUid,powerUserUid) {
 function loadSuperUsers() {
   // Create the query to load the last 12 messages and listen for new ones.
   var query = firebase.firestore()
-      .collection('users')
-      .where("type", "==", 1)
-      .limit(12);
+    .collection('users')
+    .where("type", "==", 1)
+    .limit(12);
 
   query.get()
-      .then(function (querySnapshot) {
-          querySnapshot.forEach(function (doc) {
-              // doc.data() is never undefined for query doc snapshots
-              console.log(doc.id, " => ", doc.data());
-            //   console.log(doc.data().profilePic);
-              displayPowerUser(doc.id, doc.data().name);
+    .then(function (querySnapshot) {
+      querySnapshot.forEach(function (doc) {
+        // doc.data() is never undefined for query doc snapshots
+        console.log(doc.id, " => ", doc.data());
+        //   console.log(doc.data().profilePic);
+        displayPowerUser(doc.id, doc.data().name);
 
-          });
-      })
-      .catch(function (error) {
-          console.log("Error getting documents: ", error);
       });
+    })
+    .catch(function (error) {
+      console.log("Error getting documents: ", error);
+    });
 }
 
 // Saves a new message containing an image in Firebase.
@@ -199,36 +199,36 @@ function onMessageFormSubmit(e) {
 // Triggers when the auth state change for instance when the user signs-in or signs-out.
 function authStateObserver(user) {
   if (user) { // User is signed in!
-      // Get the signed-in user's profile pic and name.
-      //   var profilePicUrl = getProfilePicUrl();
-      //   var userName = getUserName();
-      userUid = user.uid;
+    // Get the signed-in user's profile pic and name.
+    //   var profilePicUrl = getProfilePicUrl();
+    //   var userName = getUserName();
+    userUid = user.uid;
 
-      // Set the user's profile pic and name.
-      //   userPicElement.style.backgroundImage = 'url(' + addSizeToGoogleProfilePic(profilePicUrl) + ')';
-      //   userNameElement.textContent = userName;
+    // Set the user's profile pic and name.
+    //   userPicElement.style.backgroundImage = 'url(' + addSizeToGoogleProfilePic(profilePicUrl) + ')';
+    //   userNameElement.textContent = userName;
 
-      // Show user's profile and sign-out button.
-      //   userNameElement.removeAttribute('hidden');
-      //   userPicElement.removeAttribute('hidden');
-      //   signOutButtonElement.removeAttribute('hidden');
+    // Show user's profile and sign-out button.
+    //   userNameElement.removeAttribute('hidden');
+    //   userPicElement.removeAttribute('hidden');
+    //   signOutButtonElement.removeAttribute('hidden');
 
-      // Hide sign-in button.
-      //   signInButtonElement.setAttribute('hidden', 'true');
+    // Hide sign-in button.
+    //   signInButtonElement.setAttribute('hidden', 'true');
 
-      loadSuperUsers();
+    loadSuperUsers();
 
-      // We save the Firebase Messaging Device token and enable notifications.
-      //   saveMessagingDeviceToken();
+    // We save the Firebase Messaging Device token and enable notifications.
+    //   saveMessagingDeviceToken();
   } else { // User is signed out!
-      // Hide user's profile and sign-out button.
-      // userNameElement.setAttribute('hidden', 'true');
-      // userPicElement.setAttribute('hidden', 'true');
-      // signOutButtonElement.setAttribute('hidden', 'true');
+    // Hide user's profile and sign-out button.
+    // userNameElement.setAttribute('hidden', 'true');
+    // userPicElement.setAttribute('hidden', 'true');
+    // signOutButtonElement.setAttribute('hidden', 'true');
 
-      // Show sign-in button.
-      // signInButtonElement.removeAttribute('hidden');
-      window.location.href = "login.html";
+    // Show sign-in button.
+    // signInButtonElement.removeAttribute('hidden');
+    window.location.href = "login.html";
   }
 }
 
@@ -405,7 +405,7 @@ function displayMessage(id, timestamp, name, text, picUrl, imageUrl) {
 function displayPowerUser(pUserUid, name) {
   var div = document.getElementById(pUserUid) || createAndInsertPUser(pUserUid);
   div.querySelector('.name').textContent = name;
-//   div.querySelector('.profilePic').src = "profilepic.png";
+  //   div.querySelector('.profilePic').src = "profilepic.png";
 
   // div.querySelector('.message').textContent = text;
   // div.querySelector('.message').innerHTML = div.querySelector('.message').innerHTML.replace(/\n/g, '<br>');
@@ -416,7 +416,7 @@ function displayPowerUser(pUserUid, name) {
   pUserListElement.scrollTop = pUserListElement.scrollHeight;
 
   div.onclick = function () {
-      onPUserClick(div, pUserUid);
+    onPUserClick(div, pUserUid);
   }
 
 }
@@ -427,14 +427,14 @@ function onPUserClick(div, id) {
   //     messageListElement.firstChild.remove();
   // }
   //   loadMessages(userUid,id);
-  pUsersCardContainer.setAttribute('hidden',true);
+  pUsersCardContainer.setAttribute('hidden', true);
   messageCardContainer.removeAttribute('hidden');
   backBtn.removeAttribute('hidden');
-//   console.log(div);
+  //   console.log(div);
   while (messageListElement.firstChild) {
     messageListElement.firstChild.remove();
-}
-loadMessages(userUid,id);
+  }
+  loadMessages(userUid, id);
 
 }
 
@@ -494,10 +494,17 @@ var backBtn = document.getElementById('backBtn');
 var userUid;
 var conversationId;
 
-backBtn.onclick= function(){
-    backBtn.setAttribute('hidden',true);
-    messageCardContainer.setAttribute('hidden',true);
-    pUsersCardContainer.removeAttribute('hidden');
+backBtn.onclick = function () {
+  backBtn.setAttribute('hidden', true);
+  messageCardContainer.setAttribute('hidden', true);
+  pUsersCardContainer.removeAttribute('hidden');
+
+  // var addMessage = firebase.functions().httpsCallable('addMessage');
+  // addMessage({ number: 5 }).then(function (result) {
+  //   // Read result of the Cloud Function.
+  //   console.log(result.data);
+  //   // ...
+  // });
 
 }
 
