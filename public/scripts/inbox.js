@@ -78,10 +78,17 @@ function saveMessage(messageText) {
 }
 
 // Loads chat messages history and listens for upcoming ones.
-function loadMessages(normalUserUid, powerUserUid) {
+function loadMessages(normalUserUid, powerUserUid, divUid) {
   // Create the query to load the last 12 messages and listen for new ones.
   console.log(powerUserUid);
-  conversationId = normalUserUid.concat(powerUserUid);
+  console.log("asdfasdfasdfasdf"+ divUid);
+  var detect = normalUserUid.localeCompare(divUid);
+  if(detect==0){
+    conversationId = normalUserUid.concat(powerUserUid);
+  }else{
+    conversationId = powerUserUid.concat(normalUserUid);
+  }
+
   var query = firebase.firestore()
     .collection(DB_DATA)
     .doc(DB_CONVERSATIONS)
@@ -107,8 +114,8 @@ function loadMessages(normalUserUid, powerUserUid) {
 function loadSuperUsers() {
   // Create the query to load the last 12 messages and listen for new ones.
   var query = firebase.firestore()
-    .collection(DB_USERS)
-    .where("type", "==", 1)
+    .collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS)
+    // .where("type", "==", 1)
     .limit(12);
 
   query.get()
@@ -117,7 +124,7 @@ function loadSuperUsers() {
         // doc.data() is never undefined for query doc snapshots
         console.log(doc.id, " => ", doc.data());
         //   console.log(doc.data().profilePic);
-        displayPowerUser(doc.id, doc.data().displayName,doc.data().photoURL);
+        displayChats(doc.id, doc.data().displayName,doc.data().photoURL);
 
       });
     })
@@ -193,10 +200,10 @@ function onMessageFormSubmit(e) {
       resetMaterialTextfield(messageInputElement);
       toggleButton();
 
-      var docRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(powerUserUid);
+      var docRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(otherUserUid);
       docRef.get().then(function (doc) {
-        var senderRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(powerUserUid);
-        var receiverRef = firebase.firestore().collection(DB_USERS).doc(powerUserUid).collection(DB_CONVERSATIONS).doc(userUid);
+        var senderRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(otherUserUid);
+        var receiverRef = firebase.firestore().collection(DB_USERS).doc(otherUserUid).collection(DB_CONVERSATIONS).doc(userUid);
         if (doc.exists) {
           var receiverSend = userUid.localeCompare(doc.data().receiverUid);
           //0 means equal
@@ -237,10 +244,10 @@ function onMessageFormSubmit(e) {
           var setBatch = firebase.firestore().batch();
           setBatch.set(senderRef, {
             senderUid: userUid,
-            receiverUid: powerUserUid,
+            receiverUid: otherUserUid,
             replied: 0,
-            displayName: powerUserName,
-            photoURL: powerUserPic,
+            displayName: otherUserName,
+            photoURL: otherUserPic,
             // text: messageText,
             // profilePicUrl: getProfilePicUrl(),
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -248,7 +255,7 @@ function onMessageFormSubmit(e) {
 
           setBatch.set(receiverRef, {
             senderUid: userUid,
-            receiverUid: powerUserUid,
+            receiverUid: otherUserUid,
             replied: 0,
             displayName: userName,
             photoURL : userPic,
@@ -480,9 +487,9 @@ function displayMessage(id, timestamp, name, text, picUrl, imageUrl) {
 }
 
 // Displays a Message in the UI.
-function displayPowerUser(pUserUid, name, pUserPic) {
-  var div = document.getElementById(pUserUid) || createAndInsertPUser(pUserUid);
-  div.querySelector('.name').textContent = name;
+function displayChats(othUsrUid, othUsrDisplayName, othUsrPic) {
+  var div = document.getElementById(othUsrUid) || createAndInsertPUser(othUsrUid);
+  div.querySelector('.name').textContent = othUsrDisplayName;
   //   div.querySelector('.profilePic').src = "profilepic.png";
 
   // div.querySelector('.message').textContent = text;
@@ -494,28 +501,26 @@ function displayPowerUser(pUserUid, name, pUserPic) {
   pUserListElement.scrollTop = pUserListElement.scrollHeight;
 
   div.onclick = function () {
-    onPUserClick(div, pUserUid, name, pUserPic);
+    onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic);
   }
 
 }
 
-function onPUserClick(div, pUserUid, pUserName, pUserPic) {
+function onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic) {
   console.log(div);
-  // while (messageListElement.firstChild) {
-  //     messageListElement.firstChild.remove();
-  // }
-  //   loadMessages(userUid,id);
-  powerUserUid = pUserUid;
-  powerUserName = pUserName;
-  powerUserPic = pUserPic;
-  pUsersCardContainer.setAttribute('hidden', true);
+
+  otherUserUid = othUsrUid;
+  otherUserName = othUsrDisplayName;
+  otherUserPic = othUsrPic;
+  chatCardContainer.setAttribute('hidden', true);
   messageCardContainer.removeAttribute('hidden');
   backBtn.removeAttribute('hidden');
   //   console.log(div);
   while (messageListElement.firstChild) {
     messageListElement.firstChild.remove();
   }
-  loadMessages(userUid, pUserUid);
+
+  loadMessages(userUid, othUsrUid, div.id);
 
 }
 
@@ -565,23 +570,23 @@ messageInputElement.addEventListener('change', toggleButton);
 var userUid;
 var userName;
 var userPic;
-var powerUserUid;
-var powerUserName;
-var powerUserPic;
+var otherUserUid;
+var otherUserName;
+var otherUserPic;
 var conversationId;
 
 // var emailLog = "anamere@gmail.com";
 // var passwordLog = "123456"
 
 var pUserListElement = document.getElementById('pusers');
-var pUsersCardContainer = document.getElementById('pusers-card-container');
+var chatCardContainer = document.getElementById('pusers-card-container');
 var profileContainer = document.getElementById('profile-container');
 var backBtn = document.getElementById('backBtn');
 
 backBtn.onclick = function () {
   backBtn.setAttribute('hidden', true);
   messageCardContainer.setAttribute('hidden', true);
-  pUsersCardContainer.removeAttribute('hidden');
+  chatCardContainer.removeAttribute('hidden');
 
 }
 
