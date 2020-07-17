@@ -1,7 +1,8 @@
-function addUserToDb(userEmail, userName, userUid) {
+function addUserToDb(userEmail, userName, userUid, photoURL) {
   var db = firebase.firestore();
   db.collection("users").doc(userUid).set({
-    name: userName,
+    displayName: userName,
+    photoURL: photoURL,
     email: userEmail,
     uid: userUid,
     type: 0
@@ -25,7 +26,7 @@ function authStateObserver(user) {
       if (doc.exists) {
         window.location.href = "inbox.html";
       } else {
-        addUserToDb(user.email, user.displayName, user.uid);
+        addUserToDb(user.email, user.displayName, user.uid, user.photoURL);
       }
     }).catch(function (error) {
       console.log("Error getting document:", error);

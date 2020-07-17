@@ -1,8 +1,9 @@
 function addUserToDb(userEmail, userName, userUid) {
     var db = firebase.firestore();
     db.collection("users").doc(userUid).set({
-        name: userName,
+        displayName: userName,
         email: userEmail,
+        photoURL: " ",
         uid: userUid,
         type: 0
     })
@@ -20,7 +21,18 @@ function authStateObserver(user) {
     if (user) { // User is signed in!
         addUserToDb(email, firstName + " " + lastName, user.uid);
         window.alert("success login");
-        window.location.href = "index.html";
+        
+        user.updateProfile({
+            displayName: firstName + " " + lastName,
+            photoURL: " "
+          }).then(function() {
+            window.location.href = "index.html";
+          }).catch(function(error) {
+            // An error happened.
+          });
+
+
+        // window.location.href = "index.html";
     } else {
         window.alert("fail login");
     }

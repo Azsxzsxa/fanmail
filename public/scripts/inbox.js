@@ -67,7 +67,7 @@ function isUserSignedIn() {
 function saveMessage(messageText) {
   // Add a new message entry to the database.
   console.log(conversationId);
-  return firebase.firestore().collection('data').doc("conversations").collection(conversationId).add({
+  return firebase.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(conversationId).add({
     name: getUserName(),
     text: messageText,
     profilePicUrl: getProfilePicUrl(),
@@ -83,8 +83,8 @@ function loadMessages(normalUserUid, powerUserUid) {
   console.log(powerUserUid);
   conversationId = normalUserUid.concat(powerUserUid);
   var query = firebase.firestore()
-    .collection('data')
-    .doc("conversations")
+    .collection(DB_DATA)
+    .doc(DB_CONVERSATIONS)
     .collection(conversationId)
     .orderBy('timestamp', 'desc')
     .limit(12);
@@ -107,7 +107,7 @@ function loadMessages(normalUserUid, powerUserUid) {
 function loadSuperUsers() {
   // Create the query to load the last 12 messages and listen for new ones.
   var query = firebase.firestore()
-    .collection('users')
+    .collection(DB_USERS)
     .where("type", "==", 1)
     .limit(12);
 
@@ -117,7 +117,7 @@ function loadSuperUsers() {
         // doc.data() is never undefined for query doc snapshots
         console.log(doc.id, " => ", doc.data());
         //   console.log(doc.data().profilePic);
-        displayPowerUser(doc.id, doc.data().name);
+        displayPowerUser(doc.id, doc.data().displayName,doc.data().photoURL);
 
       });
     })
@@ -192,6 +192,82 @@ function onMessageFormSubmit(e) {
       // Clear message text field and re-enable the SEND button.
       resetMaterialTextfield(messageInputElement);
       toggleButton();
+
+      var docRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(powerUserUid);
+      docRef.get().then(function (doc) {
+        var senderRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(powerUserUid);
+        var receiverRef = firebase.firestore().collection(DB_USERS).doc(powerUserUid).collection(DB_CONVERSATIONS).doc(userUid);
+        if (doc.exists) {
+          var receiverSend = userUid.localeCompare(doc.data().receiverUid);
+          //0 means equal
+          var updateBatch = firebase.firestore().batch();
+          if (receiverSend == 0) {
+            //message from pUser
+            updateBatch.update(senderRef, {
+              "replied": 1,
+              "timestamp": firebase.firestore.FieldValue.serverTimestamp()
+            });
+            updateBatch.update(receiverRef, {
+              "replied": 1,
+              "timestamp": firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+          } else {
+            //new message to pUser
+            updateBatch.update(senderRef, {
+              "replied": 0,
+              "timestamp": firebase.firestore.FieldValue.serverTimestamp()
+            });
+            updateBatch.update(receiverRef, {
+              "replied": 0,
+              "timestamp": firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+          }
+
+          //batch commit
+          updateBatch.commit().then(function () {
+            console.log("sent successfully");
+
+          }).catch(function () {
+            console.log("sent fail");
+          });
+
+        } else {
+          var setBatch = firebase.firestore().batch();
+          setBatch.set(senderRef, {
+            senderUid: userUid,
+            receiverUid: powerUserUid,
+            replied: 0,
+            displayName: powerUserName,
+            photoURL: powerUserPic,
+            // text: messageText,
+            // profilePicUrl: getProfilePicUrl(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          });
+
+          setBatch.set(receiverRef, {
+            senderUid: userUid,
+            receiverUid: powerUserUid,
+            replied: 0,
+            displayName: userName,
+            photoURL : userPic,
+            // text: messageText,
+            // profilePicUrl: getProfilePicUrl(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          });
+
+          setBatch.commit().then(function () {
+            console.log("sent successfully");
+
+          }).catch(function () {
+            console.log("sent fail");
+          });
+
+
+        }
+
+      });
     });
   }
 }
@@ -203,6 +279,8 @@ function authStateObserver(user) {
     //   var profilePicUrl = getProfilePicUrl();
     //   var userName = getUserName();
     userUid = user.uid;
+    userName = user.displayName;
+    userPic = user.photoURL;
 
     // Set the user's profile pic and name.
     //   userPicElement.style.backgroundImage = 'url(' + addSizeToGoogleProfilePic(profilePicUrl) + ')';
@@ -402,7 +480,7 @@ function displayMessage(id, timestamp, name, text, picUrl, imageUrl) {
 }
 
 // Displays a Message in the UI.
-function displayPowerUser(pUserUid, name) {
+function displayPowerUser(pUserUid, name, pUserPic) {
   var div = document.getElementById(pUserUid) || createAndInsertPUser(pUserUid);
   div.querySelector('.name').textContent = name;
   //   div.querySelector('.profilePic').src = "profilepic.png";
@@ -416,17 +494,20 @@ function displayPowerUser(pUserUid, name) {
   pUserListElement.scrollTop = pUserListElement.scrollHeight;
 
   div.onclick = function () {
-    onPUserClick(div, pUserUid);
+    onPUserClick(div, pUserUid, name, pUserPic);
   }
 
 }
 
-function onPUserClick(div, id) {
+function onPUserClick(div, pUserUid, pUserName, pUserPic) {
   console.log(div);
   // while (messageListElement.firstChild) {
   //     messageListElement.firstChild.remove();
   // }
   //   loadMessages(userUid,id);
+  powerUserUid = pUserUid;
+  powerUserName = pUserName;
+  powerUserPic = pUserPic;
   pUsersCardContainer.setAttribute('hidden', true);
   messageCardContainer.removeAttribute('hidden');
   backBtn.removeAttribute('hidden');
@@ -434,7 +515,7 @@ function onPUserClick(div, id) {
   while (messageListElement.firstChild) {
     messageListElement.firstChild.remove();
   }
-  loadMessages(userUid, id);
+  loadMessages(userUid, pUserUid);
 
 }
 
@@ -482,6 +563,11 @@ messageInputElement.addEventListener('keyup', toggleButton);
 messageInputElement.addEventListener('change', toggleButton);
 
 var userUid;
+var userName;
+var userPic;
+var powerUserUid;
+var powerUserName;
+var powerUserPic;
 var conversationId;
 
 // var emailLog = "anamere@gmail.com";
@@ -491,20 +577,11 @@ var pUserListElement = document.getElementById('pusers');
 var pUsersCardContainer = document.getElementById('pusers-card-container');
 var profileContainer = document.getElementById('profile-container');
 var backBtn = document.getElementById('backBtn');
-var userUid;
-var conversationId;
 
 backBtn.onclick = function () {
   backBtn.setAttribute('hidden', true);
   messageCardContainer.setAttribute('hidden', true);
   pUsersCardContainer.removeAttribute('hidden');
-
-  // var addMessage = firebase.functions().httpsCallable('addMessage');
-  // addMessage({ number: 5 }).then(function (result) {
-  //   // Read result of the Cloud Function.
-  //   console.log(result.data);
-  //   // ...
-  // });
 
 }
 

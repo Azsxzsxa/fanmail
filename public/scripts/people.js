@@ -117,7 +117,7 @@ function loadSuperUsers() {
         // doc.data() is never undefined for query doc snapshots
         console.log(doc.id, " => ", doc.data());
         //   console.log(doc.data().profilePic);
-        displayPowerUser(doc.id, doc.data().name);
+        displayPowerUser(doc.id, doc.data().displayName,doc.data().photoURL);
 
       });
     })
@@ -239,6 +239,8 @@ function onMessageFormSubmit(e) {
             senderUid: userUid,
             receiverUid: powerUserUid,
             replied: 0,
+            displayName: powerUserName,
+            photoURL: powerUserPic,
             // text: messageText,
             // profilePicUrl: getProfilePicUrl(),
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -248,6 +250,8 @@ function onMessageFormSubmit(e) {
             senderUid: userUid,
             receiverUid: powerUserUid,
             replied: 0,
+            displayName: userName,
+            photoURL : userPic,
             // text: messageText,
             // profilePicUrl: getProfilePicUrl(),
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -275,6 +279,8 @@ function authStateObserver(user) {
     //   var profilePicUrl = getProfilePicUrl();
     //   var userName = getUserName();
     userUid = user.uid;
+    userName = user.displayName;
+    userPic = user.photoURL;
 
     // Set the user's profile pic and name.
     //   userPicElement.style.backgroundImage = 'url(' + addSizeToGoogleProfilePic(profilePicUrl) + ')';
@@ -474,7 +480,7 @@ function displayMessage(id, timestamp, name, text, picUrl, imageUrl) {
 }
 
 // Displays a Message in the UI.
-function displayPowerUser(pUserUid, name) {
+function displayPowerUser(pUserUid, name, pUserPic) {
   var div = document.getElementById(pUserUid) || createAndInsertPUser(pUserUid);
   div.querySelector('.name').textContent = name;
   //   div.querySelector('.profilePic').src = "profilepic.png";
@@ -488,18 +494,20 @@ function displayPowerUser(pUserUid, name) {
   pUserListElement.scrollTop = pUserListElement.scrollHeight;
 
   div.onclick = function () {
-    onPUserClick(div, pUserUid);
+    onPUserClick(div, pUserUid, name, pUserPic);
   }
 
 }
 
-function onPUserClick(div, pUserUid) {
+function onPUserClick(div, pUserUid, pUserName, pUserPic) {
   console.log(div);
   // while (messageListElement.firstChild) {
   //     messageListElement.firstChild.remove();
   // }
   //   loadMessages(userUid,id);
   powerUserUid = pUserUid;
+  powerUserName = pUserName;
+  powerUserPic = pUserPic;
   pUsersCardContainer.setAttribute('hidden', true);
   messageCardContainer.removeAttribute('hidden');
   backBtn.removeAttribute('hidden');
@@ -555,7 +563,11 @@ messageInputElement.addEventListener('keyup', toggleButton);
 messageInputElement.addEventListener('change', toggleButton);
 
 var userUid;
+var userName;
+var userPic;
 var powerUserUid;
+var powerUserName;
+var powerUserPic;
 var conversationId;
 
 // var emailLog = "anamere@gmail.com";
