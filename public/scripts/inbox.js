@@ -78,15 +78,15 @@ function saveMessage(messageText) {
 }
 
 // Loads chat messages history and listens for upcoming ones.
-function loadMessages(normalUserUid, powerUserUid, divUid) {
+function loadMessages(normalUserUid, powerUserUid,receiverUid) {
   // Create the query to load the last 12 messages and listen for new ones.
-  console.log(powerUserUid);
-  console.log("asdfasdfasdfasdf"+ divUid);
-  var detect = normalUserUid.localeCompare(divUid);
+
+  var detect = normalUserUid.localeCompare(receiverUid);
   if(detect==0){
-    conversationId = normalUserUid.concat(powerUserUid);
-  }else{
     conversationId = powerUserUid.concat(normalUserUid);
+  }else{
+    // conversationId = powerUserUid.concat(normalUserUid);
+    conversationId = normalUserUid.concat(powerUserUid);
   }
 
   var query = firebase.firestore()
@@ -124,7 +124,7 @@ function loadSuperUsers() {
         // doc.data() is never undefined for query doc snapshots
         console.log(doc.id, " => ", doc.data());
         //   console.log(doc.data().profilePic);
-        displayChats(doc.id, doc.data().displayName,doc.data().photoURL);
+        displayChats(doc.id, doc.data().displayName,doc.data().photoURL,doc.data().receiverUid);
 
       });
     })
@@ -487,7 +487,7 @@ function displayMessage(id, timestamp, name, text, picUrl, imageUrl) {
 }
 
 // Displays a Message in the UI.
-function displayChats(othUsrUid, othUsrDisplayName, othUsrPic) {
+function displayChats(othUsrUid, othUsrDisplayName, othUsrPic, receiverUid) {
   var div = document.getElementById(othUsrUid) || createAndInsertPUser(othUsrUid);
   div.querySelector('.name').textContent = othUsrDisplayName;
   //   div.querySelector('.profilePic').src = "profilepic.png";
@@ -501,12 +501,12 @@ function displayChats(othUsrUid, othUsrDisplayName, othUsrPic) {
   pUserListElement.scrollTop = pUserListElement.scrollHeight;
 
   div.onclick = function () {
-    onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic);
+    onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic,receiverUid);
   }
 
 }
 
-function onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic) {
+function onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic,receiverUid) {
   console.log(div);
 
   otherUserUid = othUsrUid;
@@ -520,7 +520,7 @@ function onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic) {
     messageListElement.firstChild.remove();
   }
 
-  loadMessages(userUid, othUsrUid, div.id);
+  loadMessages(userUid, othUsrUid, receiverUid);
 
 }
 
