@@ -78,13 +78,13 @@ function saveMessage(messageText) {
 }
 
 // Loads chat messages history and listens for upcoming ones.
-function loadMessages(normalUserUid, powerUserUid,receiverUid) {
+function loadMessages(normalUserUid, powerUserUid, receiverUid) {
   // Create the query to load the last 12 messages and listen for new ones.
 
   var detect = normalUserUid.localeCompare(receiverUid);
-  if(detect==0){
+  if (detect == 0) {
     conversationId = powerUserUid.concat(normalUserUid);
-  }else{
+  } else {
     // conversationId = powerUserUid.concat(normalUserUid);
     conversationId = normalUserUid.concat(powerUserUid);
   }
@@ -124,7 +124,7 @@ function loadSuperUsers() {
         // doc.data() is never undefined for query doc snapshots
         console.log(doc.id, " => ", doc.data());
         //   console.log(doc.data().profilePic);
-        displayChats(doc.id, doc.data().displayName,doc.data().photoURL,doc.data().receiverUid);
+        displayChats(doc.id, doc.data().displayName, doc.data().photoURL, doc.data().receiverUid);
 
       });
     })
@@ -258,7 +258,7 @@ function onMessageFormSubmit(e) {
             receiverUid: otherUserUid,
             replied: 0,
             displayName: userName,
-            photoURL : userPic,
+            photoURL: userPic,
             // text: messageText,
             // profilePicUrl: getProfilePicUrl(),
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -501,12 +501,12 @@ function displayChats(othUsrUid, othUsrDisplayName, othUsrPic, receiverUid) {
   pUserListElement.scrollTop = pUserListElement.scrollHeight;
 
   div.onclick = function () {
-    onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic,receiverUid);
+    onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic, receiverUid);
   }
 
 }
 
-function onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic,receiverUid) {
+function onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic, receiverUid) {
   console.log(div);
 
   otherUserUid = othUsrUid;
@@ -527,6 +527,10 @@ function onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic,receiverUid) {
 // Enables or disables the submit button depending on the values of the input
 // fields.
 function toggleButton() {
+  console.log("asdf");
+  var words = messageInputElement.value.match(/(\w+)/g);
+  output.value = words ? words.length : 0;
+
   if (messageInputElement.value) {
     submitButtonElement.removeAttribute('disabled');
   } else {
@@ -610,6 +614,9 @@ backBtn.onclick = function () {
 
 // initialize Firebase
 initFirebaseAuth();
+var output = document.getElementById("counter");
+
+
 
 // TODO: Enable Firebase Performance Monitoring.
 

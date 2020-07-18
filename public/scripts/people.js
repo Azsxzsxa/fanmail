@@ -117,7 +117,7 @@ function loadSuperUsers() {
         // doc.data() is never undefined for query doc snapshots
         console.log(doc.id, " => ", doc.data());
         //   console.log(doc.data().profilePic);
-        displayChats(doc.id, doc.data().displayName,doc.data().photoURL);
+        displayChats(doc.id, doc.data().displayName, doc.data().photoURL);
 
       });
     })
@@ -251,7 +251,7 @@ function onMessageFormSubmit(e) {
             receiverUid: otherUserUid,
             replied: 0,
             displayName: userName,
-            photoURL : userPic,
+            photoURL: userPic,
             // text: messageText,
             // profilePicUrl: getProfilePicUrl(),
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -522,6 +522,8 @@ function onChatClick(div, pUserUid, pUserName, pUserPic) {
 // Enables or disables the submit button depending on the values of the input
 // fields.
 function toggleButton() {
+  var words = messageInputElement.value.match(/(\w+)/g);
+  output.value = words ? words.length : 0;
   if (messageInputElement.value) {
     submitButtonElement.removeAttribute('disabled');
   } else {
@@ -577,6 +579,7 @@ var pUserListElement = document.getElementById('pusers');
 var chatCardContainer = document.getElementById('pusers-card-container');
 var profileContainer = document.getElementById('profile-container');
 var backBtn = document.getElementById('backBtn');
+var output = document.getElementById("counter");
 
 backBtn.onclick = function () {
   backBtn.setAttribute('hidden', true);
