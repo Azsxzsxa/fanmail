@@ -187,7 +187,7 @@ function onMediaFileSelected(event) {
 function onMessageFormSubmit(e) {
   e.preventDefault();
   // Check that the user entered a message and is signed in.
-  if (messageInputElement.value && checkSignedInWithMessage()) {
+  if (messageInputElement.value && checkSignedInWithMessage() && output.value <80) {
     saveMessage(messageInputElement.value).then(function () {
       // Clear message text field and re-enable the SEND button.
       resetMaterialTextfield(messageInputElement);
@@ -269,6 +269,8 @@ function onMessageFormSubmit(e) {
 
       });
     });
+  }else{
+    console.log("too many words");
   }
 }
 

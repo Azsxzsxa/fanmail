@@ -84,9 +84,11 @@ function loadMessages(normalUserUid, powerUserUid, receiverUid) {
   var detect = normalUserUid.localeCompare(receiverUid);
   if (detect == 0) {
     conversationId = powerUserUid.concat(normalUserUid);
+    puserLimitUid = 0;
   } else {
     // conversationId = powerUserUid.concat(normalUserUid);
     conversationId = normalUserUid.concat(powerUserUid);
+    puserLimitUid = powerUserUid;
   }
 
   var query = firebase.firestore()
@@ -190,93 +192,127 @@ function onMediaFileSelected(event) {
   }
 }
 
+function sendMessage() {
+  saveMessage(messageInputElement.value).then(function () {
+    // Clear message text field and re-enable the SEND button.
+    resetMaterialTextfield(messageInputElement);
+    toggleButton();
+
+    var docRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(otherUserUid);
+    docRef.get().then(function (doc) {
+      var senderRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(otherUserUid);
+      var receiverRef = firebase.firestore().collection(DB_USERS).doc(otherUserUid).collection(DB_CONVERSATIONS).doc(userUid);
+      if (doc.exists) {
+        var receiverSend = userUid.localeCompare(doc.data().receiverUid);
+        //0 means equal
+        console.log(receiverSend);
+        var updateBatch = firebase.firestore().batch();
+        if (receiverSend == 0) {
+          //message from pUser
+          updateBatch.update(senderRef, {
+            "replied": 1,
+            "timestamp": firebase.firestore.FieldValue.serverTimestamp()
+          });
+          updateBatch.update(receiverRef, {
+            "replied": 1,
+            "timestamp": firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } else {
+          //new message to pUser
+          updateBatch.update(senderRef, {
+            "replied": 0,
+            "timestamp": firebase.firestore.FieldValue.serverTimestamp()
+          });
+          updateBatch.update(receiverRef, {
+            "replied": 0,
+            "timestamp": firebase.firestore.FieldValue.serverTimestamp()
+          });
+          updateBatch.update(firebase.firestore().collection(DB_USERS).doc(puserLimitUid), {
+            inboxNo: firebase.firestore.FieldValue.increment(1)
+          });
+
+        }
+
+        //batch commit
+        updateBatch.commit().then(function () {
+          console.log("sent successfully");
+
+        }).catch(function () {
+          console.log("sent fail");
+        });
+
+      } else {
+        var setBatch = firebase.firestore().batch();
+        setBatch.set(senderRef, {
+          senderUid: userUid,
+          receiverUid: otherUserUid,
+          replied: 0,
+          displayName: otherUserName,
+          photoURL: otherUserPic,
+          // text: messageText,
+          // profilePicUrl: getProfilePicUrl(),
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        setBatch.set(receiverRef, {
+          senderUid: userUid,
+          receiverUid: otherUserUid,
+          replied: 0,
+          displayName: userName,
+          photoURL: userPic,
+          // text: messageText,
+          // profilePicUrl: getProfilePicUrl(),
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        setBatch.update(firebase.firestore().collection(DB_USERS).doc(puserLimitUid), {
+          inboxNo: firebase.firestore.FieldValue.increment(1)
+        });
+
+        setBatch.commit().then(function () {
+          console.log("sent successfully");
+
+        }).catch(function () {
+          console.log("sent fail");
+        });
+
+
+      }
+
+    });
+  });
+
+}
+
 // Triggered when the send new message form is submitted.
 function onMessageFormSubmit(e) {
   e.preventDefault();
   // Check that the user entered a message and is signed in.
-  if (messageInputElement.value && checkSignedInWithMessage()) {
-    saveMessage(messageInputElement.value).then(function () {
-      // Clear message text field and re-enable the SEND button.
-      resetMaterialTextfield(messageInputElement);
-      toggleButton();
-
-      var docRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(otherUserUid);
-      docRef.get().then(function (doc) {
-        var senderRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(otherUserUid);
-        var receiverRef = firebase.firestore().collection(DB_USERS).doc(otherUserUid).collection(DB_CONVERSATIONS).doc(userUid);
+  if (output.value < 80) {
+    if (puserLimitUid != 0) {
+      firebase.firestore().collection(DB_USERS).doc(puserLimitUid).get().then(function (doc) {
         if (doc.exists) {
-          var receiverSend = userUid.localeCompare(doc.data().receiverUid);
-          //0 means equal
-          var updateBatch = firebase.firestore().batch();
-          if (receiverSend == 0) {
-            //message from pUser
-            updateBatch.update(senderRef, {
-              "replied": 1,
-              "timestamp": firebase.firestore.FieldValue.serverTimestamp()
-            });
-            updateBatch.update(receiverRef, {
-              "replied": 1,
-              "timestamp": firebase.firestore.FieldValue.serverTimestamp()
-            });
-
+          console.log(doc.data());
+          if (doc.data().inboxNo < doc.data().inboxLimit) {
+            console.log("limit fine");
+            sendMessage();
           } else {
-            //new message to pUser
-            updateBatch.update(senderRef, {
-              "replied": 0,
-              "timestamp": firebase.firestore.FieldValue.serverTimestamp()
-            });
-            updateBatch.update(receiverRef, {
-              "replied": 0,
-              "timestamp": firebase.firestore.FieldValue.serverTimestamp()
-            });
-
+            console.log("limit reached");
           }
-
-          //batch commit
-          updateBatch.commit().then(function () {
-            console.log("sent successfully");
-
-          }).catch(function () {
-            console.log("sent fail");
-          });
-
         } else {
-          var setBatch = firebase.firestore().batch();
-          setBatch.set(senderRef, {
-            senderUid: userUid,
-            receiverUid: otherUserUid,
-            replied: 0,
-            displayName: otherUserName,
-            photoURL: otherUserPic,
-            // text: messageText,
-            // profilePicUrl: getProfilePicUrl(),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-          });
-
-          setBatch.set(receiverRef, {
-            senderUid: userUid,
-            receiverUid: otherUserUid,
-            replied: 0,
-            displayName: userName,
-            photoURL: userPic,
-            // text: messageText,
-            // profilePicUrl: getProfilePicUrl(),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-          });
-
-          setBatch.commit().then(function () {
-            console.log("sent successfully");
-
-          }).catch(function () {
-            console.log("sent fail");
-          });
-
-
+          // doc.data() will be undefined in this case
+          console.log("No such document!");
         }
-
+      }).catch(function (error) {
+        console.log("Error getting document:", error);
       });
-    });
+    } else {
+      sendMessage();
+    }
+  } else {
+      console.log("too many words");
   }
+
 }
 
 // Triggers when the auth state change for instance when the user signs-in or signs-out.
@@ -578,6 +614,7 @@ var otherUserUid;
 var otherUserName;
 var otherUserPic;
 var conversationId;
+var puserLimitUid;
 
 // var emailLog = "anamere@gmail.com";
 // var passwordLog = "123456"
