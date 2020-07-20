@@ -124,7 +124,6 @@ function loadSuperUsers() {
     .then(function (querySnapshot) {
       querySnapshot.forEach(function (doc) {
         // doc.data() is never undefined for query doc snapshots
-        console.log(doc.id, " => ", doc.data());
         //   console.log(doc.data().profilePic);
         displayChats(doc.id, doc.data().displayName, doc.data().photoURL, doc.data().receiverUid);
 
@@ -292,7 +291,6 @@ function onMessageFormSubmit(e) {
     if (puserLimitUid != 0) {
       firebase.firestore().collection(DB_USERS).doc(puserLimitUid).get().then(function (doc) {
         if (doc.exists) {
-          console.log(doc.data());
           if (doc.data().inboxNo < doc.data().inboxLimit) {
             console.log("limit fine");
             sendMessage();
@@ -543,15 +541,12 @@ function displayChats(othUsrUid, othUsrDisplayName, othUsrPic, receiverUid) {
 }
 
 function onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic, receiverUid) {
-  console.log(div);
-
   otherUserUid = othUsrUid;
   otherUserName = othUsrDisplayName;
   otherUserPic = othUsrPic;
   chatCardContainer.setAttribute('hidden', true);
   messageCardContainer.removeAttribute('hidden');
   backBtn.removeAttribute('hidden');
-  //   console.log(div);
   while (messageListElement.firstChild) {
     messageListElement.firstChild.remove();
   }
@@ -631,16 +626,6 @@ backBtn.onclick = function () {
 
 }
 
-// signInEmail.onclick = function(){
-//   var emailLog = signInEmailInput.value;
-// var passwordLog = signInPassInput.value;
-//   firebase.auth().signInWithEmailAndPassword(emailLog, passwordLog).catch(function(error) {
-//     // Handle Errors here.
-//     var errorCode = error.code;
-//     var errorMessage = error.message;
-//     window.alert(error.code+error.message);
-//   });
-// }
 
 // Events for image upload.
 // imageButtonElement.addEventListener('click', function(e) {
@@ -653,12 +638,14 @@ backBtn.onclick = function () {
 initFirebaseAuth();
 var output = document.getElementById("counter");
 
+// query string
+// window.location.href = "Posts?Category=" + sel;
+// var url_string = window.location.href ;
+// var url = new URL(url_string);
+// var c = url.searchParams.get("crcat");
+// console.log(c);
 
 
-// TODO: Enable Firebase Performance Monitoring.
-
-// We load currently existing chat messages and listen to new ones.
-// loadMessages();
 
 
 
