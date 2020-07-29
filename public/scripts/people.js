@@ -502,22 +502,38 @@ function displayChats(pUserUid, name, pUserPic) {
 }
 
 function onChatClick(div, pUserUid, pUserName, pUserPic) {
-  console.log(div);
+  // console.log(div);
   // while (messageListElement.firstChild) {
   //     messageListElement.firstChild.remove();
   // }
   //   loadMessages(userUid,id);
-  otherUserUid = pUserUid;
-  otherUserName = pUserName;
-  otherUserPic = pUserPic;
+  // window.location.href = "message.html?ou=" + pUserUid+"&ru="+pUserUid+"&p="+1;
+
+  loadMessages(userUid, pUserUid, pUserUid);
   chatCardContainer.setAttribute('hidden', true);
   messageCardContainer.removeAttribute('hidden');
   backBtn.removeAttribute('hidden');
-  //   console.log(div);
-  while (messageListElement.firstChild) {
-    messageListElement.firstChild.remove();
-  }
-  loadMessages(userUid, pUserUid);
+
+
+
+
+  // sessionStorage.setItem("ou", pUserUid);
+  // sessionStorage.setItem("ru", pUserUid);
+  // sessionStorage.setItem("p", 2);
+  // window.location.href = "message.html";
+
+
+  otherUserUid = pUserUid;
+  otherUserName = pUserName;
+  otherUserPic = pUserPic;
+  // chatCardContainer.setAttribute('hidden', true);
+  // messageCardContainer.removeAttribute('hidden');
+  // backBtn.removeAttribute('hidden');
+  // //   console.log(div);
+  // while (messageListElement.firstChild) {
+  //   messageListElement.firstChild.remove();
+  // }
+  // loadMessages(userUid, pUserUid);
 
 }
 

@@ -22,17 +22,17 @@ function signIn() {
   firebase.auth().signInWithPopup(provider);
 }
 
-function signInEmail(){
+function signInEmail() {
   // var email = signInEmailInput.value;
   // var password = signInPassInput.value;
 
 
 
-  firebase.auth().signInWithEmailAndPassword(email, password).catch(function(error) {
+  firebase.auth().signInWithEmailAndPassword(email, password).catch(function (error) {
     // Handle Errors here.
     var errorCode = error.code;
     var errorMessage = error.message;
-    window.alert("error"+email+password +error.code + errorMessage);
+    window.alert("error" + email + password + error.code + errorMessage);
   });
 }
 
@@ -67,7 +67,7 @@ function isUserSignedIn() {
 function saveMessage(messageText) {
   // Add a new message entry to the database.
   console.log(conversationId);
-  return firebase.firestore().collection('data').doc("conversations").collection(conversationId).add({
+  return firebase.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(conversationId).add({
     name: getUserName(),
     text: messageText,
     profilePicUrl: getProfilePicUrl(),
@@ -78,13 +78,26 @@ function saveMessage(messageText) {
 }
 
 // Loads chat messages history and listens for upcoming ones.
-function loadMessages(normalUserUid,powerUserUid) {
+function loadMessages(normalUserUid, powerUserUid, receiverUid) {
   // Create the query to load the last 12 messages and listen for new ones.
-  console.log(powerUserUid);
-  conversationId = normalUserUid.concat(powerUserUid);
+    while (messageListElement.firstChild) {
+    messageListElement.firstChild.remove();
+  }
+  othUsrUid=powerUserUid;
+
+  var detect = normalUserUid.localeCompare(receiverUid);
+  if (detect == 0) {
+    conversationId = powerUserUid.concat(normalUserUid);
+    puserLimitUid = 0;
+  } else {
+    // conversationId = powerUserUid.concat(normalUserUid);
+    conversationId = normalUserUid.concat(powerUserUid);
+    puserLimitUid = powerUserUid;
+  }
+
   var query = firebase.firestore()
-    .collection('data')
-    .doc("conversations")
+    .collection(DB_DATA)
+    .doc(DB_CONVERSATIONS)
     .collection(conversationId)
     .orderBy('timestamp', 'desc')
     .limit(12);
@@ -101,29 +114,6 @@ function loadMessages(normalUserUid,powerUserUid) {
       }
     });
   });
-}
-
-//load influencers on UI
-function loadSuperUsers() {
-  // Create the query to load the last 12 messages and listen for new ones.
-  var query = firebase.firestore()
-      .collection('users')
-      .where("type", "==", 1)
-      .limit(12);
-
-  query.get()
-      .then(function (querySnapshot) {
-          querySnapshot.forEach(function (doc) {
-              // doc.data() is never undefined for query doc snapshots
-              console.log(doc.id, " => ", doc.data());
-              console.log(doc.data().profilePic);
-              displayPowerUser(doc.id, doc.data().name);
-
-          });
-      })
-      .catch(function (error) {
-          console.log("Error getting documents: ", error);
-      });
 }
 
 // Saves a new message containing an image in Firebase.
@@ -183,52 +173,163 @@ function onMediaFileSelected(event) {
   }
 }
 
+function sendMessage() {
+  saveMessage(messageInputElement.value).then(function () {
+    // Clear message text field and re-enable the SEND button.
+    resetMaterialTextfield(messageInputElement);
+    toggleButton();
+
+    var docRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(othUsrUid);
+    docRef.get().then(function (doc) {
+      var senderRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(othUsrUid);
+      var receiverRef = firebase.firestore().collection(DB_USERS).doc(othUsrUid).collection(DB_CONVERSATIONS).doc(userUid);
+      if (doc.exists) {
+        var receiverSend = userUid.localeCompare(doc.data().receiverUid);
+        //0 means equal
+        console.log(receiverSend);
+        var updateBatch = firebase.firestore().batch();
+        if (receiverSend == 0) {
+          //message from pUser
+          updateBatch.update(senderRef, {
+            "replied": 1,
+            "timestamp": firebase.firestore.FieldValue.serverTimestamp()
+          });
+          updateBatch.update(receiverRef, {
+            "replied": 1,
+            "timestamp": firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } else {
+          //new message to pUser
+          updateBatch.update(senderRef, {
+            "replied": 0,
+            "timestamp": firebase.firestore.FieldValue.serverTimestamp()
+          });
+          updateBatch.update(receiverRef, {
+            "replied": 0,
+            "timestamp": firebase.firestore.FieldValue.serverTimestamp()
+          });
+          updateBatch.update(firebase.firestore().collection(DB_USERS).doc(puserLimitUid), {
+            inboxNo: firebase.firestore.FieldValue.increment(1)
+          });
+
+        }
+
+        //batch commit
+        updateBatch.commit().then(function () {
+          console.log("sent successfully");
+
+        }).catch(function () {
+          console.log("sent fail");
+        });
+
+      } else {
+        var setBatch = firebase.firestore().batch();
+        setBatch.set(senderRef, {
+          senderUid: userUid,
+          receiverUid: othUsrUid,
+          replied: 0,
+          displayName: otherUserName,
+          photoURL: otherUserPic,
+          // text: messageText,
+          // profilePicUrl: getProfilePicUrl(),
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        setBatch.set(receiverRef, {
+          senderUid: userUid,
+          receiverUid: othUsrUid,
+          replied: 0,
+          displayName: userName,
+          photoURL: userPic,
+          // text: messageText,
+          // profilePicUrl: getProfilePicUrl(),
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        setBatch.update(firebase.firestore().collection(DB_USERS).doc(puserLimitUid), {
+          inboxNo: firebase.firestore.FieldValue.increment(1)
+        });
+
+        setBatch.commit().then(function () {
+          console.log("sent successfully");
+
+        }).catch(function () {
+          console.log("sent fail");
+        });
+
+
+      }
+
+    });
+  });
+
+}
+
 // Triggered when the send new message form is submitted.
 function onMessageFormSubmit(e) {
   e.preventDefault();
   // Check that the user entered a message and is signed in.
-  if (messageInputElement.value && checkSignedInWithMessage()) {
-    saveMessage(messageInputElement.value).then(function () {
-      // Clear message text field and re-enable the SEND button.
-      resetMaterialTextfield(messageInputElement);
-      toggleButton();
-    });
+  if (output.value < 80) {
+    if (puserLimitUid != 0) {
+      firebase.firestore().collection(DB_USERS).doc(puserLimitUid).get().then(function (doc) {
+        if (doc.exists) {
+          if (doc.data().inboxNo < doc.data().inboxLimit) {
+            console.log("limit fine");
+            sendMessage();
+          } else {
+            console.log("limit reached");
+          }
+        } else {
+          // doc.data() will be undefined in this case
+          console.log("No such document!");
+        }
+      }).catch(function (error) {
+        console.log("Error getting document:", error);
+      });
+    } else {
+      sendMessage();
+    }
+  } else {
+      console.log("too many words");
   }
+
 }
 
 // Triggers when the auth state change for instance when the user signs-in or signs-out.
 function authStateObserver(user) {
   if (user) { // User is signed in!
-      // Get the signed-in user's profile pic and name.
-      //   var profilePicUrl = getProfilePicUrl();
-      //   var userName = getUserName();
-      userUid = user.uid;
+    // Get the signed-in user's profile pic and name.
+    //   var profilePicUrl = getProfilePicUrl();
+    //   var userName = getUserName();
+    userUid = user.uid;
+    userName = user.displayName;
+    userPic = user.photoURL;
 
-      // Set the user's profile pic and name.
-      //   userPicElement.style.backgroundImage = 'url(' + addSizeToGoogleProfilePic(profilePicUrl) + ')';
-      //   userNameElement.textContent = userName;
+    // Set the user's profile pic and name.
+    //   userPicElement.style.backgroundImage = 'url(' + addSizeToGoogleProfilePic(profilePicUrl) + ')';
+    //   userNameElement.textContent = userName;
 
-      // Show user's profile and sign-out button.
-      //   userNameElement.removeAttribute('hidden');
-      //   userPicElement.removeAttribute('hidden');
-      //   signOutButtonElement.removeAttribute('hidden');
+    // Show user's profile and sign-out button.
+    //   userNameElement.removeAttribute('hidden');
+    //   userPicElement.removeAttribute('hidden');
+    //   signOutButtonElement.removeAttribute('hidden');
 
-      // Hide sign-in button.
-      //   signInButtonElement.setAttribute('hidden', 'true');
+    // Hide sign-in button.
+    //   signInButtonElement.setAttribute('hidden', 'true');
 
-      loadSuperUsers();
+    loadMessages(userUid, othUsrUid, receiverUid);
 
-      // We save the Firebase Messaging Device token and enable notifications.
-      //   saveMessagingDeviceToken();
+    // We save the Firebase Messaging Device token and enable notifications.
+    //   saveMessagingDeviceToken();
   } else { // User is signed out!
-      // Hide user's profile and sign-out button.
-      // userNameElement.setAttribute('hidden', 'true');
-      // userPicElement.setAttribute('hidden', 'true');
-      // signOutButtonElement.setAttribute('hidden', 'true');
+    // Hide user's profile and sign-out button.
+    // userNameElement.setAttribute('hidden', 'true');
+    // userPicElement.setAttribute('hidden', 'true');
+    // signOutButtonElement.setAttribute('hidden', 'true');
 
-      // Show sign-in button.
-      // signInButtonElement.removeAttribute('hidden');
-      window.location.href = "login.html";
+    // Show sign-in button.
+    // signInButtonElement.removeAttribute('hidden');
+    window.location.href = "login.html";
   }
 }
 
@@ -330,45 +431,6 @@ function createAndInsertMessage(id, timestamp) {
   return div;
 }
 
-function createAndInsertPUser(id) {
-  const container = document.createElement('div');
-  container.innerHTML = POWER_USER;
-  const div = container.firstChild;
-  div.setAttribute('id', id);
-
-  // If timestamp is null, assume we've gotten a brand new message.
-  // https://stackoverflow.com/a/47781432/4816918
-  // timestamp = timestamp ? timestamp.toMillis() : Date.now();
-  // div.setAttribute('timestamp', timestamp);
-
-  // figure out where to insert new message
-  const existingUsers = pUserListElement.children;
-  if (existingUsers.length === 0) {
-    pUserListElement.appendChild(div);
-  } else {
-    let pUserListNode = existingUsers[0];
-
-    // while (messageListNode) {
-    //   const messageListNodeTime = messageListNode.getAttribute('timestamp');
-
-    //   if (!messageListNodeTime) {
-    //     throw new Error(
-    //       `Child ${messageListNode.id} has no 'timestamp' attribute`
-    //     );
-    //   }
-
-    //   if (messageListNodeTime > timestamp) {
-    //     break;
-    //   }
-
-    //   messageListNode = messageListNode.nextSibling;
-    // }
-
-    pUserListElement.insertBefore(div, pUserListNode);
-  }
-
-  return div;
-}
 
 // Displays a Message in the UI.
 function displayMessage(id, timestamp, name, text, picUrl, imageUrl) {
@@ -401,40 +463,12 @@ function displayMessage(id, timestamp, name, text, picUrl, imageUrl) {
   messageInputElement.focus();
 }
 
-// Displays a Message in the UI.
-function displayPowerUser(pUserUid, name) {
-  var div = document.getElementById(pUserUid) || createAndInsertPUser(pUserUid);
-  div.querySelector('.name').textContent = name;
-  div.querySelector('.profilePic').src = "profilepic.png";
-
-  // div.querySelector('.message').textContent = text;
-  // div.querySelector('.message').innerHTML = div.querySelector('.message').innerHTML.replace(/\n/g, '<br>');
-
-
-
-  setTimeout(function () { div.classList.add('visible') }, 1);
-  pUserListElement.scrollTop = pUserListElement.scrollHeight;
-
-  div.onclick = function () {
-      onPUserClick(div, pUserUid);
-  }
-
-}
-
-function onPUserClick(div, id) {
-  console.log(div);
-  // while (messageListElement.firstChild) {
-  //     messageListElement.firstChild.remove();
-  // }
-  //   loadMessages(userUid,id);
-  peopleContainer.setAttribute('hidden',true);
-  profileContainer.removeAttribute('hidden');
-
-}
-
 // Enables or disables the submit button depending on the values of the input
 // fields.
 function toggleButton() {
+  var words = messageInputElement.value.match(/(\w+)/g);
+  output.value = words ? words.length : 0;
+
   if (messageInputElement.value) {
     submitButtonElement.removeAttribute('disabled');
   } else {
@@ -455,23 +489,19 @@ function checkSetup() {
 checkSetup();
 
 // Shortcuts to DOM Elements.
+var messageCardContainer = document.getElementById('messages-card-container');
 var messageListElement = document.getElementById('messages');
 var pUserListElement = document.getElementById('pusers');
 var messageFormElement = document.getElementById('message-form');
 var messageInputElement = document.getElementById('message');
 var submitButtonElement = document.getElementById('submit');
 // var imageButtonElement = document.getElementById('submitImage');
-var imageFormElement = document.getElementById('image-form');
-var mediaCaptureElement = document.getElementById('mediaCapture');
-var userPicElement = document.getElementById('user-pic');
-var userNameElement = document.getElementById('user-name');
-var signInButtonElement = document.getElementById('sign-in');
-var signOutButtonElement = document.getElementById('sign-out');
+;
+
 var signInSnackbarElement = document.getElementById('must-signin-snackbar');
 
 // Saves message on form submit.
 messageFormElement.addEventListener('submit', onMessageFormSubmit);
-signOutButtonElement.addEventListener('click', signOut);
 // signInButtonElement.addEventListener('click', signIn);
 // signInEmailSubmit.addEventListener('click',signInEmail);
 
@@ -479,30 +509,27 @@ signOutButtonElement.addEventListener('click', signOut);
 messageInputElement.addEventListener('keyup', toggleButton);
 messageInputElement.addEventListener('change', toggleButton);
 
-var userUid;
+var userName;
+var userPic;
+var otherUserName;
+var otherUserPic;
 var conversationId;
+var puserLimitUid;
+
+
+
 
 // var emailLog = "anamere@gmail.com";
 // var passwordLog = "123456"
 
-var pUserListElement = document.getElementById('pusers');
-var peopleContainer = document.getElementById('pusers-card-container');
 var profileContainer = document.getElementById('profile-container');
-var userUid;
-var conversationId;
 
+backBtn.onclick = function () {
+  chatCardContainer.removeAttribute('hidden');
+  messageCardContainer.setAttribute('hidden',true);
+  backBtn.setAttribute('hidden',true);
+}
 
-
-// signInEmail.onclick = function(){
-//   var emailLog = signInEmailInput.value;
-// var passwordLog = signInPassInput.value;
-//   firebase.auth().signInWithEmailAndPassword(emailLog, passwordLog).catch(function(error) {
-//     // Handle Errors here.
-//     var errorCode = error.code;
-//     var errorMessage = error.message;
-//     window.alert(error.code+error.message);
-//   });
-// }
 
 // Events for image upload.
 // imageButtonElement.addEventListener('click', function(e) {
@@ -512,12 +539,34 @@ var conversationId;
 // mediaCaptureElement.addEventListener('change', onMediaFileSelected);
 
 // initialize Firebase
-initFirebaseAuth();
+var url_string = window.location.href ;
+var url = new URL(url_string);
+var userUid ;
+var othUsrUid;
+// var othUsrUid= url.searchParams.get("ou");
+// var receiverUid = url.searchParams.get("ru");
+// var page = url.searchParams.get("p");
 
-// TODO: Enable Firebase Performance Monitoring.
+// var othUsrUid = sessionStorage.getItem("ou");
+// var receiverUid = sessionStorage.getItem("ru");
+// var page = sessionStorage.getItem("p");
 
-// We load currently existing chat messages and listen to new ones.
-// loadMessages();
+
+
+// console.log("other usr"+othUsrUid);
+// console.log("receiver usr"+receiverUid);
+// initFirebaseAuth();
+var chatCardContainer = document.getElementById('pusers-card-container');
+var output = document.getElementById("counter");
+
+// query string
+// window.location.href = "Posts?Category=" + sel;
+// var url_string = window.location.href ;
+// var url = new URL(url_string);
+// var c = url.searchParams.get("crcat");
+// console.log(c);
+
+
 
 
 

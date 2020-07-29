@@ -63,55 +63,6 @@ function isUserSignedIn() {
   return !!firebase.auth().currentUser;
 }
 
-// Saves a new message to your Cloud Firestore database.
-function saveMessage(messageText) {
-  // Add a new message entry to the database.
-  console.log(conversationId);
-  return firebase.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(conversationId).add({
-    name: getUserName(),
-    text: messageText,
-    profilePicUrl: getProfilePicUrl(),
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  }).catch(function (error) {
-    console.error('Error writing new message to database', error);
-  });
-}
-
-// Loads chat messages history and listens for upcoming ones.
-function loadMessages(normalUserUid, powerUserUid, receiverUid) {
-  // Create the query to load the last 12 messages and listen for new ones.
-
-  var detect = normalUserUid.localeCompare(receiverUid);
-  if (detect == 0) {
-    conversationId = powerUserUid.concat(normalUserUid);
-    puserLimitUid = 0;
-  } else {
-    // conversationId = powerUserUid.concat(normalUserUid);
-    conversationId = normalUserUid.concat(powerUserUid);
-    puserLimitUid = powerUserUid;
-  }
-
-  var query = firebase.firestore()
-    .collection(DB_DATA)
-    .doc(DB_CONVERSATIONS)
-    .collection(conversationId)
-    .orderBy('timestamp', 'desc')
-    .limit(12);
-
-  // Start listening to the query.
-  query.onSnapshot(function (snapshot) {
-    snapshot.docChanges().forEach(function (change) {
-      if (change.type === 'removed') {
-        deleteMessage(change.doc.id);
-      } else {
-        var message = change.doc.data();
-        displayMessage(change.doc.id, message.timestamp, message.name,
-          message.text, message.profilePicUrl, message.imageUrl);
-      }
-    });
-  });
-}
-
 //load influencers on UI
 function loadSuperUsers() {
   // Create the query to load the last 12 messages and listen for new ones.
@@ -134,29 +85,6 @@ function loadSuperUsers() {
     });
 }
 
-// Saves a new message containing an image in Firebase.
-// This first saves the image in Firebase storage.
-function saveImageMessage(file) {
-  // TODO 9: Posts a new image as a message.
-}
-
-// Saves the messaging device token to the datastore.
-function saveMessagingDeviceToken() {
-  firebase.messaging().getToken().then(function (currentToken) {
-    if (currentToken) {
-      console.log('Got FCM device token:', currentToken);
-      // Saving the Device Token to the datastore.
-      firebase.firestore().collection('fcmTokens').doc(currentToken)
-        .set({ uid: firebase.auth().currentUser.uid });
-    } else {
-      // Need to request permissions to show notifications.
-      requestNotificationsPermissions();
-    }
-  }).catch(function (error) {
-    console.error('Unable to get messaging token.', error);
-  });
-}
-
 // Requests permission to show notifications.
 function requestNotificationsPermissions() {
   console.log('Requesting notifications permission...');
@@ -168,150 +96,6 @@ function requestNotificationsPermissions() {
   });
 }
 
-// Triggered when a file is selected via the media picker.
-function onMediaFileSelected(event) {
-  event.preventDefault();
-  var file = event.target.files[0];
-
-  // Clear the selection in the file picker input.
-  imageFormElement.reset();
-
-  // Check if the file is an image.
-  if (!file.type.match('image.*')) {
-    var data = {
-      message: 'You can only share images',
-      timeout: 2000
-    };
-    signInSnackbarElement.MaterialSnackbar.showSnackbar(data);
-    return;
-  }
-  // Check if the user is signed-in
-  if (checkSignedInWithMessage()) {
-    saveImageMessage(file);
-  }
-}
-
-function sendMessage() {
-  saveMessage(messageInputElement.value).then(function () {
-    // Clear message text field and re-enable the SEND button.
-    resetMaterialTextfield(messageInputElement);
-    toggleButton();
-
-    var docRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(otherUserUid);
-    docRef.get().then(function (doc) {
-      var senderRef = firebase.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS).doc(otherUserUid);
-      var receiverRef = firebase.firestore().collection(DB_USERS).doc(otherUserUid).collection(DB_CONVERSATIONS).doc(userUid);
-      if (doc.exists) {
-        var receiverSend = userUid.localeCompare(doc.data().receiverUid);
-        //0 means equal
-        console.log(receiverSend);
-        var updateBatch = firebase.firestore().batch();
-        if (receiverSend == 0) {
-          //message from pUser
-          updateBatch.update(senderRef, {
-            "replied": 1,
-            "timestamp": firebase.firestore.FieldValue.serverTimestamp()
-          });
-          updateBatch.update(receiverRef, {
-            "replied": 1,
-            "timestamp": firebase.firestore.FieldValue.serverTimestamp()
-          });
-        } else {
-          //new message to pUser
-          updateBatch.update(senderRef, {
-            "replied": 0,
-            "timestamp": firebase.firestore.FieldValue.serverTimestamp()
-          });
-          updateBatch.update(receiverRef, {
-            "replied": 0,
-            "timestamp": firebase.firestore.FieldValue.serverTimestamp()
-          });
-          updateBatch.update(firebase.firestore().collection(DB_USERS).doc(puserLimitUid), {
-            inboxNo: firebase.firestore.FieldValue.increment(1)
-          });
-
-        }
-
-        //batch commit
-        updateBatch.commit().then(function () {
-          console.log("sent successfully");
-
-        }).catch(function () {
-          console.log("sent fail");
-        });
-
-      } else {
-        var setBatch = firebase.firestore().batch();
-        setBatch.set(senderRef, {
-          senderUid: userUid,
-          receiverUid: otherUserUid,
-          replied: 0,
-          displayName: otherUserName,
-          photoURL: otherUserPic,
-          // text: messageText,
-          // profilePicUrl: getProfilePicUrl(),
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        setBatch.set(receiverRef, {
-          senderUid: userUid,
-          receiverUid: otherUserUid,
-          replied: 0,
-          displayName: userName,
-          photoURL: userPic,
-          // text: messageText,
-          // profilePicUrl: getProfilePicUrl(),
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        setBatch.update(firebase.firestore().collection(DB_USERS).doc(puserLimitUid), {
-          inboxNo: firebase.firestore.FieldValue.increment(1)
-        });
-
-        setBatch.commit().then(function () {
-          console.log("sent successfully");
-
-        }).catch(function () {
-          console.log("sent fail");
-        });
-
-
-      }
-
-    });
-  });
-
-}
-
-// Triggered when the send new message form is submitted.
-function onMessageFormSubmit(e) {
-  e.preventDefault();
-  // Check that the user entered a message and is signed in.
-  if (output.value < 80) {
-    if (puserLimitUid != 0) {
-      firebase.firestore().collection(DB_USERS).doc(puserLimitUid).get().then(function (doc) {
-        if (doc.exists) {
-          if (doc.data().inboxNo < doc.data().inboxLimit) {
-            console.log("limit fine");
-            sendMessage();
-          } else {
-            console.log("limit reached");
-          }
-        } else {
-          // doc.data() will be undefined in this case
-          console.log("No such document!");
-        }
-      }).catch(function (error) {
-        console.log("Error getting document:", error);
-      });
-    } else {
-      sendMessage();
-    }
-  } else {
-      console.log("too many words");
-  }
-
-}
 
 // Triggers when the auth state change for instance when the user signs-in or signs-out.
 function authStateObserver(user) {
@@ -541,17 +325,31 @@ function displayChats(othUsrUid, othUsrDisplayName, othUsrPic, receiverUid) {
 }
 
 function onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic, receiverUid) {
-  otherUserUid = othUsrUid;
-  otherUserName = othUsrDisplayName;
-  otherUserPic = othUsrPic;
+  // window.location.href = "message.html?ou=" + othUsrUid+"&ru="+receiverUid+"&p="+1;
+  loadMessages(userUid, othUsrUid, receiverUid);
   chatCardContainer.setAttribute('hidden', true);
   messageCardContainer.removeAttribute('hidden');
   backBtn.removeAttribute('hidden');
-  while (messageListElement.firstChild) {
-    messageListElement.firstChild.remove();
-  }
 
-  loadMessages(userUid, othUsrUid, receiverUid);
+  // sessionStorage.setItem("ou", othUsrUid);
+  // sessionStorage.setItem("ru", receiverUid);
+  // sessionStorage.setItem("p", 1);
+  // window.location.href = "message.html";
+  
+  
+  // otherUserUid = othUsrUid;
+  // otherUserName = othUsrDisplayName;
+  // otherUserPic = othUsrPic;
+  // chatCardContainer.setAttribute('hidden', true);
+  // messageCardContainer.removeAttribute('hidden');
+  // backBtn.removeAttribute('hidden');
+  // while (messageListElement.firstChild) {
+  //   messageListElement.firstChild.remove();
+  // }
+
+  // loadMessages(userUid, othUsrUid, receiverUid);
+
+  //TODO : window.location.hfred= "message.html?cu=123,ou=123"
 
 }
 
@@ -582,30 +380,23 @@ function checkSetup() {
 checkSetup();
 
 // Shortcuts to DOM Elements.
-var messageCardContainer = document.getElementById('messages-card-container');
-var messageListElement = document.getElementById('messages');
-var pUserListElement = document.getElementById('pusers');
-var messageFormElement = document.getElementById('message-form');
-var messageInputElement = document.getElementById('message');
-var submitButtonElement = document.getElementById('submit');
 // var imageButtonElement = document.getElementById('submitImage');
 ;
 
 var signInSnackbarElement = document.getElementById('must-signin-snackbar');
 
 // Saves message on form submit.
-messageFormElement.addEventListener('submit', onMessageFormSubmit);
 // signInButtonElement.addEventListener('click', signIn);
 // signInEmailSubmit.addEventListener('click',signInEmail);
 
 // Toggle for the button.
-messageInputElement.addEventListener('keyup', toggleButton);
-messageInputElement.addEventListener('change', toggleButton);
+// messageInputElement.addEventListener('keyup', toggleButton);
+// messageInputElement.addEventListener('change', toggleButton);
 
 var userUid;
 var userName;
 var userPic;
-var otherUserUid;
+var othUsrUid;
 var otherUserName;
 var otherUserPic;
 var conversationId;
@@ -617,16 +408,9 @@ var puserLimitUid;
 var pUserListElement = document.getElementById('pusers');
 var chatCardContainer = document.getElementById('pusers-card-container');
 var profileContainer = document.getElementById('profile-container');
-var backBtn = document.getElementById('backBtn');
 
-backBtn.onclick = function () {
-  backBtn.setAttribute('hidden', true);
-  messageCardContainer.setAttribute('hidden', true);
-  chatCardContainer.removeAttribute('hidden');
-
-}
-
-
+messageCardContainer.setAttribute('hidden', true);
+backBtn.setAttribute('hidden',true);
 // Events for image upload.
 // imageButtonElement.addEventListener('click', function(e) {
 //   e.preventDefault();
@@ -636,7 +420,6 @@ backBtn.onclick = function () {
 
 // initialize Firebase
 initFirebaseAuth();
-var output = document.getElementById("counter");
 
 // query string
 // window.location.href = "Posts?Category=" + sel;
