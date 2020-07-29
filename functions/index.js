@@ -26,7 +26,7 @@ admin.initializeApp();
 // exports.addWelcomeMessages = functions.auth.user().onCreate(async (user) => {
 //     console.log('A new user signed in for the first time.');
 //     const fullName = user.displayName || 'Anonymous';
-  
+
 //     // Saves the new welcome message into the database
 //     // which then displays it in the FriendlyChat clients.
 //     await admin.firestore().collection('messages').add({
@@ -38,14 +38,32 @@ admin.initializeApp();
 //     console.log('Welcome message written to database.');
 //   });
 
-  exports.addMessage = functions.https.onCall((data, context) => {
-    const text = data.number;
-    if(text == 5){
-        return "great";
-    }else{
-      return "yeyeye";
-    }
-  });
+exports.addMessage = functions.https.onCall(async(data, context) => {
+  const locator = data.locator;
+  const userRef = admin.firestore().collection('users').doc(locator);
+  const doc = await userRef.get();
+  if (!doc.exists) {
+    return 'No such document!';
+  } else {
+    // console.log('Document data:', doc.data());
+    return doc.data();
+  }
+
+
+  // if (text == 5) {
+  //   var cars = new Array();
+  //   var carA = { type: "Fiat", model: "500", color: "white" };
+  //   var carB = { type: "subaru", model: "600", color: "black" };
+  //   var carC = { type: "punto", model: "700", color: "yellow" };
+  //   cars.push(carA);
+  //   cars.push(carB);
+  //   cars.push(carC);
+  //   return cars;
+  // } else {
+  //   return "yeyeye";
+  // }
+});
+
 
 // TODO(DEVELOPER): Write the blurOffensiveImages Function here.
 

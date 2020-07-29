@@ -77,31 +77,7 @@ function saveMessage(messageText) {
   });
 }
 
-// Loads chat messages history and listens for upcoming ones.
-function loadMessages(normalUserUid, powerUserUid) {
-  // Create the query to load the last 12 messages and listen for new ones.
-  console.log(powerUserUid);
-  conversationId = normalUserUid.concat(powerUserUid);
-  var query = firebase.firestore()
-    .collection(DB_DATA)
-    .doc(DB_CONVERSATIONS)
-    .collection(conversationId)
-    .orderBy('timestamp', 'desc')
-    .limit(12);
 
-  // Start listening to the query.
-  query.onSnapshot(function (snapshot) {
-    snapshot.docChanges().forEach(function (change) {
-      if (change.type === 'removed') {
-        deleteMessage(change.doc.id);
-      } else {
-        var message = change.doc.data();
-        displayMessage(change.doc.id, message.timestamp, message.name,
-          message.text, message.profilePicUrl, message.imageUrl);
-      }
-    });
-  });
-}
 
 //load influencers on UI
 function loadSuperUsers() {
@@ -625,6 +601,8 @@ backBtn.onclick = function () {
 // mediaCaptureElement.addEventListener('change', onMediaFileSelected);
 
 // initialize Firebase
+messageCardContainer.setAttribute('hidden', true);
+backBtn.setAttribute('hidden',true);
 initFirebaseAuth();
 
 // TODO: Enable Firebase Performance Monitoring.
