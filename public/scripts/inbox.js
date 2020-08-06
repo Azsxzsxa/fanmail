@@ -66,23 +66,40 @@ function isUserSignedIn() {
 //load influencers on UI
 function loadSuperUsers() {
   // Create the query to load the last 12 messages and listen for new ones.
-  var query = firebase.firestore()
-    .collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS)
-    // .where("type", "==", 1)
-    .limit(12);
+  // var query = firebase.firestore()
+  //   .collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS)
+  //   // .where("type", "==", 1)
+  //   .limit(12);
 
-  query.get()
-    .then(function (querySnapshot) {
-      querySnapshot.forEach(function (doc) {
-        // doc.data() is never undefined for query doc snapshots
-        //   console.log(doc.data().profilePic);
-        displayChats(doc.id, doc.data().displayName, doc.data().photoURL, doc.data().receiverUid);
+  // query.get()
+  //   .then(function (querySnapshot) {
+  //     querySnapshot.forEach(function (doc) {
+  //       // doc.data() is never undefined for query doc snapshots
+  //       //   console.log(doc.data().profilePic);
+  //       displayChats(doc.id, doc.data().displayName, doc.data().photoURL, doc.data().receiverUid);
 
+  //     });
+  //   })
+  //   .catch(function (error) {
+  //     console.log("Error getting documents: ", error);
+  //   });
+
+
+    var getChats = firebase.functions().httpsCallable('getChats');
+    getChats({data: userUid }).then(function (result) {
+      result.data.forEach(element => {
+        displayChats(element.elementId, element.userName, element.photoURL);
       });
-    })
-    .catch(function (error) {
-      console.log("Error getting documents: ", error);
+    }).catch(function (error) {
+      // Getting the Error details.
+      var code = error.code;
+      var message = error.message;
+      var details = error.details;
+      console.log("loading chats fail"+code+message+details);
+      // ...
     });
+
+
 }
 
 // Requests permission to show notifications.
@@ -305,9 +322,9 @@ function displayMessage(id, timestamp, name, text, picUrl, imageUrl) {
 }
 
 // Displays a Message in the UI.
-function displayChats(othUsrUid, othUsrDisplayName, othUsrPic, receiverUid) {
-  var div = document.getElementById(othUsrUid) || createAndInsertPUser(othUsrUid);
-  div.querySelector('.name').textContent = othUsrDisplayName;
+function displayChats(elementId, displayName, photoURL) {
+  var div = document.getElementById(elementId) || createAndInsertPUser(elementId);
+  div.querySelector('.name').textContent = displayName;
   //   div.querySelector('.profilePic').src = "profilepic.png";
 
   // div.querySelector('.message').textContent = text;
@@ -319,14 +336,14 @@ function displayChats(othUsrUid, othUsrDisplayName, othUsrPic, receiverUid) {
   pUserListElement.scrollTop = pUserListElement.scrollHeight;
 
   div.onclick = function () {
-    onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic, receiverUid);
+    onChatClick(displayName);
   }
 
 }
 
-function onChatClick(div, othUsrUid, othUsrDisplayName, othUsrPic, receiverUid) {
+function onChatClick(displayName) {
   // window.location.href = "message.html?ou=" + othUsrUid+"&ru="+receiverUid+"&p="+1;
-  loadMessages(userUid, othUsrUid, receiverUid);
+  // loadMessages(displayName);
   chatCardContainer.setAttribute('hidden', true);
   messageCardContainer.removeAttribute('hidden');
   backBtn.removeAttribute('hidden');
