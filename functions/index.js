@@ -137,6 +137,134 @@ exports.getMessages = functions.https.onCall(async (data, context) => {
 });
 
 
+exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
+  const displayName = data.displayName;
+  const text = data.text;
+  const chatType = data.chatType;
+  var otherUserUid;
+  var retVal;
+
+  //message length check
+  if (text.trim().split(/\s+/).length >= 80) {
+    retVal=100;
+  }
+
+  const otherUsrRef = admin.firestore().collection('users');
+  const ssOtherUsr = await otherUsrRef.where('displayName', '==', displayName).get();
+  if (ssOtherUsr.empty) {
+    console.log('No matching documents.');
+    return;
+  }
+  var chatId;
+  var receiverSent = 1;
+  var limitReached=false;
+  ssOtherUsr.forEach(doc => {
+    otherUserUid = doc.id;
+    if (chatType == 0) {
+      chatId = context.auth.uid.concat(doc.id);
+    } else {
+      chatId = doc.id.concat(context.auth.uid);
+      receiverSent = 0;
+    }
+    //power user limit check
+    console.log(doc.data().inboxNo);
+    console.log(doc.data().inboxLimit);
+    if (doc.data().inboxNo >= doc.data().inboxLimit) {
+      console.log("should ret");
+      limitReached=true;
+    }
+  });
+  if(limitReached==true){
+    return 101;
+  }
+
+
+  const senderRef = admin.firestore().collection('users').doc(context.auth.uid).collection('conversations').doc(otherUserUid);
+  const receiverRef = admin.firestore().collection('users').doc(otherUserUid).collection('conversations').doc(context.auth.uid);
+  const convRef = admin.firestore().collection('users').doc(context.auth.uid).collection('conversations').doc(otherUserUid);
+  const convDoc = await convRef.get();
+  if (!convDoc.exists) {
+    //new
+    var setBatch = admin.firestore().batch();
+    setBatch.set(senderRef, {
+      senderUid: userUid,
+      receiverUid: othUsrUid,
+      replied: 0,
+      displayName: otherUserName,
+      photoURL: otherUserPic,
+      // text: messageText,
+      // profilePicUrl: getProfilePicUrl(),
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    setBatch.set(receiverRef, {
+      senderUid: userUid,
+      receiverUid: othUsrUid,
+      replied: 0,
+      displayName: userName,
+      photoURL: userPic,
+      // text: messageText,
+      // profilePicUrl: getProfilePicUrl(),
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    setBatch.update(admin.firestore().collection('users').doc(otherUserUid), {
+      inboxNo: admin.firestore.FieldValue.increment(1)
+    });
+
+    // var response = await setBatch.commit().catch((err) => { return 102; });
+    await setBatch.commit();
+
+  } else {
+    //exists
+    var updateBatch = admin.firestore().batch();
+    if (receiverSent == 0) {
+      //message from pUser
+      updateBatch.update(senderRef, {
+        "replied": 1,
+        "timestamp": admin.firestore.FieldValue.serverTimestamp()
+      });
+      updateBatch.update(receiverRef, {
+        "replied": 1,
+        "timestamp": admin.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      //new message to pUser
+      updateBatch.update(senderRef, {
+        "replied": 0,
+        "timestamp": admin.firestore.FieldValue.serverTimestamp()
+      });
+      updateBatch.update(receiverRef, {
+        "replied": 0,
+        "timestamp": admin.firestore.FieldValue.serverTimestamp()
+      });
+      updateBatch.update(admin.firestore().collection('users').doc(otherUserUid), {
+        inboxNo: admin.firestore.FieldValue.increment(1)
+      });
+
+    }
+
+    //batch commit
+    await updateBatch.commit();
+    // var response = await updateBatch.commit().catch((err) => { return 102; });
+  }
+
+  const res = await admin.firestore().collection('data').doc('conversations').collection(chatId).add({
+    name: context.auth.token.name,
+    text: text,
+    profilePicUrl: " ",
+    timestamp: admin.firestore.FieldValue.serverTimestamp()
+  });
+  console.log("RES ISSS:"+res);
+  return 1;
+
+
+
+
+
+});
+
+
 
 
 exports.adminSet = functions.https.onCall(async (data, context) => {

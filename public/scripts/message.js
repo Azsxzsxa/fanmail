@@ -78,8 +78,10 @@ function saveMessage(messageText) {
 }
 
 // Loads chat messages history and listens for upcoming ones.
-function loadMessages(displayName, chatType) {
-      while (messageListElement.firstChild) {
+function loadMessages(displayName, chatTypeVal) {
+  otherUserDisplayName = displayName;
+  chatType = chatTypeVal;
+  while (messageListElement.firstChild) {
     messageListElement.firstChild.remove();
   }
   var getMessages = firebase.functions().httpsCallable('getMessages');
@@ -89,10 +91,7 @@ function loadMessages(displayName, chatType) {
   }).then(function (result) {
     console.log("loading messages");
     result.data.forEach(message => {
-      console.log(typeof message.timestamp);
-      console.log(message.timestamp);
       var timestampFb = new Date(message.timestamp._seconds * 1000);
-
       displayMessage(message.elementId, timestampFb, message.displayName,
         message.text, message.photoURL);
     });
@@ -300,27 +299,25 @@ function sendMessage() {
 // Triggered when the send new message form is submitted.
 function onMessageFormSubmit(e) {
   e.preventDefault();
+ //asdf
   // Check that the user entered a message and is signed in.
   if (output.value < 80) {
-    if (puserLimitUid != 0) {
-      firebase.firestore().collection(DB_USERS).doc(puserLimitUid).get().then(function (doc) {
-        if (doc.exists) {
-          if (doc.data().inboxNo < doc.data().inboxLimit) {
-            console.log("limit fine");
-            sendMessage();
-          } else {
-            console.log("limit reached");
-          }
-        } else {
-          // doc.data() will be undefined in this case
-          console.log("No such document!");
-        }
-      }).catch(function (error) {
-        console.log("Error getting document:", error);
-      });
-    } else {
-      sendMessage();
-    }
+    var setSubmitMessage = firebase.functions().httpsCallable('setSubmitMessage');
+    setSubmitMessage({
+      displayName: otherUserDisplayName,
+      text: messageInputElement.value,
+      chatType: chatType
+    }).then(function (result) {
+      console.log(result.data);
+
+    }).catch(function (error) {
+      // Getting the Error details.
+      var code = error.code;
+      var message = error.message;
+      var details = error.details;
+      console.log('sending message failed :' + code + message + details);
+      // ...
+    });
   } else {
     console.log("too many words");
   }
@@ -433,7 +430,6 @@ function createAndInsertMessage(id, timestamp) {
   // https://stackoverflow.com/a/47781432/4816918
   // timestamp=timestamp.toDate();
   timestamp = timestamp ? timestamp.getTime() : Date.now();
-  console.log(timestamp);
   div.setAttribute('timestamp', timestamp);
 
   // figure out where to insert new message
@@ -551,7 +547,8 @@ var otherUserPic;
 var conversationId;
 var puserLimitUid;
 
-
+var otherUserDisplayName;
+var chatType;
 
 
 // var emailLog = "anamere@gmail.com";
