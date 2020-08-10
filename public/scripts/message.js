@@ -78,42 +78,74 @@ function saveMessage(messageText) {
 }
 
 // Loads chat messages history and listens for upcoming ones.
-function loadMessages(normalUserUid, powerUserUid, receiverUid) {
-  // Create the query to load the last 12 messages and listen for new ones.
-    while (messageListElement.firstChild) {
+function loadMessages(displayName, chatType) {
+      while (messageListElement.firstChild) {
     messageListElement.firstChild.remove();
   }
-  othUsrUid=powerUserUid;
+  var getMessages = firebase.functions().httpsCallable('getMessages');
+  getMessages({
+    data: displayName,
+    chatType: chatType
+  }).then(function (result) {
+    console.log("loading messages");
+    result.data.forEach(message => {
+      console.log(typeof message.timestamp);
+      console.log(message.timestamp);
+      var timestampFb = new Date(message.timestamp._seconds * 1000);
 
-  var detect = normalUserUid.localeCompare(receiverUid);
-  if (detect == 0) {
-    conversationId = powerUserUid.concat(normalUserUid);
-    puserLimitUid = 0;
-  } else {
-    // conversationId = powerUserUid.concat(normalUserUid);
-    conversationId = normalUserUid.concat(powerUserUid);
-    puserLimitUid = powerUserUid;
-  }
-
-  var query = firebase.firestore()
-    .collection(DB_DATA)
-    .doc(DB_CONVERSATIONS)
-    .collection(conversationId)
-    .orderBy('timestamp', 'desc')
-    .limit(12);
-
-  // Start listening to the query.
-  query.onSnapshot(function (snapshot) {
-    snapshot.docChanges().forEach(function (change) {
-      if (change.type === 'removed') {
-        deleteMessage(change.doc.id);
-      } else {
-        var message = change.doc.data();
-        displayMessage(change.doc.id, message.timestamp, message.name,
-          message.text, message.profilePicUrl, message.imageUrl);
-      }
+      displayMessage(message.elementId, timestampFb, message.displayName,
+        message.text, message.photoURL);
     });
+  }).catch(function (error) {
+    // Getting the Error details.
+    var code = error.code;
+    var message = error.message;
+    var details = error.details;
+    console.log('loading messages failed :' + code + message + details);
+    // ...
   });
+
+
+
+
+  // Create the query to load the last 12 messages and listen for new ones.
+  //   while (messageListElement.firstChild) {
+  //   messageListElement.firstChild.remove();
+  // }
+  // othUsrUid=powerUserUid;
+
+  // var detect = normalUserUid.localeCompare(receiverUid);
+  // if (detect == 0) {
+  //   conversationId = powerUserUid.concat(normalUserUid);
+  //   puserLimitUid = 0;
+  // } else {
+  //   // conversationId = powerUserUid.concat(normalUserUid);
+  //   conversationId = normalUserUid.concat(powerUserUid);
+  //   puserLimitUid = powerUserUid;
+  // }
+
+  // conversationId = '6CdqBEIC13WAacLY3CXOAZlDEAk1PEVi1rqxhqXk4IhxAW5HkkJ4ItF2';
+  // var query = firebase.firestore()
+  //   .collection(DB_DATA)
+  //   .doc(DB_CONVERSATIONS)
+  //   .collection(conversationId)
+  //   .orderBy('timestamp', 'desc')
+  //   .limit(12);
+
+  // // Start listening to the query.
+  // query.onSnapshot(function (snapshot) {
+  //   snapshot.docChanges().forEach(function (change) {
+  //     if (change.type === 'removed') {
+  //       deleteMessage(change.doc.id);
+  //     } else {
+  //       var message = change.doc.data();
+  //       console.log(message.timestamp);
+  //       console.log(typeof  message.timestamp);
+  //       displayMessage(change.doc.id, message.timestamp, message.name,
+  //         message.text, message.profilePicUrl);
+  //     }
+  //   });
+  // });
 }
 
 // Saves a new message containing an image in Firebase.
@@ -290,7 +322,7 @@ function onMessageFormSubmit(e) {
       sendMessage();
     }
   } else {
-      console.log("too many words");
+    console.log("too many words");
   }
 
 }
@@ -317,7 +349,7 @@ function authStateObserver(user) {
     // Hide sign-in button.
     //   signInButtonElement.setAttribute('hidden', 'true');
 
-    loadMessages(userUid, othUsrUid, receiverUid);
+    // loadMessages(userUid, othUsrUid, receiverUid);
 
     // We save the Firebase Messaging Device token and enable notifications.
     //   saveMessagingDeviceToken();
@@ -399,7 +431,9 @@ function createAndInsertMessage(id, timestamp) {
 
   // If timestamp is null, assume we've gotten a brand new message.
   // https://stackoverflow.com/a/47781432/4816918
-  timestamp = timestamp ? timestamp.toMillis() : Date.now();
+  // timestamp=timestamp.toDate();
+  timestamp = timestamp ? timestamp.getTime() : Date.now();
+  console.log(timestamp);
   div.setAttribute('timestamp', timestamp);
 
   // figure out where to insert new message
@@ -433,7 +467,7 @@ function createAndInsertMessage(id, timestamp) {
 
 
 // Displays a Message in the UI.
-function displayMessage(id, timestamp, name, text, picUrl, imageUrl) {
+function displayMessage(id, timestamp, name, text, picUrl) {
   var div = document.getElementById(id) || createAndInsertMessage(id, timestamp);
 
   // profile picture
@@ -448,15 +482,16 @@ function displayMessage(id, timestamp, name, text, picUrl, imageUrl) {
     messageElement.textContent = text;
     // Replace all line breaks by <br>.
     messageElement.innerHTML = messageElement.innerHTML.replace(/\n/g, '<br>');
-  } else if (imageUrl) { // If the message is an image.
-    var image = document.createElement('img');
-    image.addEventListener('load', function () {
-      messageListElement.scrollTop = messageListElement.scrollHeight;
-    });
-    image.src = imageUrl + '&' + new Date().getTime();
-    messageElement.innerHTML = '';
-    messageElement.appendChild(image);
   }
+  // } else if (imageUrl) { // If the message is an image.
+  //   var image = document.createElement('img');
+  //   image.addEventListener('load', function () {
+  //     messageListElement.scrollTop = messageListElement.scrollHeight;
+  //   });
+  //   image.src = imageUrl + '&' + new Date().getTime();
+  //   messageElement.innerHTML = '';
+  //   messageElement.appendChild(image);
+  // }
   // Show the card fading-in and scroll to view the new message.
   setTimeout(function () { div.classList.add('visible') }, 1);
   messageListElement.scrollTop = messageListElement.scrollHeight;
@@ -526,8 +561,8 @@ var profileContainer = document.getElementById('profile-container');
 
 backBtn.onclick = function () {
   chatCardContainer.removeAttribute('hidden');
-  messageCardContainer.setAttribute('hidden',true);
-  backBtn.setAttribute('hidden',true);
+  messageCardContainer.setAttribute('hidden', true);
+  backBtn.setAttribute('hidden', true);
 }
 
 
@@ -539,9 +574,9 @@ backBtn.onclick = function () {
 // mediaCaptureElement.addEventListener('change', onMediaFileSelected);
 
 // initialize Firebase
-var url_string = window.location.href ;
+var url_string = window.location.href;
 var url = new URL(url_string);
-var userUid ;
+var userUid;
 var othUsrUid;
 // var othUsrUid= url.searchParams.get("ou");
 // var receiverUid = url.searchParams.get("ru");

@@ -88,7 +88,7 @@ function loadSuperUsers() {
     var getChats = firebase.functions().httpsCallable('getChats');
     getChats({data: userUid }).then(function (result) {
       result.data.forEach(element => {
-        displayChats(element.elementId, element.userName, element.photoURL);
+        displayChats(element.elementId, element.userName, element.photoURL,element.chatType);
       });
     }).catch(function (error) {
       // Getting the Error details.
@@ -210,46 +210,6 @@ function deleteMessage(id) {
   }
 }
 
-function createAndInsertMessage(id, timestamp) {
-  const container = document.createElement('div');
-  container.innerHTML = MESSAGE_TEMPLATE;
-  const div = container.firstChild;
-  div.setAttribute('id', id);
-
-  // If timestamp is null, assume we've gotten a brand new message.
-  // https://stackoverflow.com/a/47781432/4816918
-  timestamp = timestamp ? timestamp.toMillis() : Date.now();
-  div.setAttribute('timestamp', timestamp);
-
-  // figure out where to insert new message
-  const existingMessages = messageListElement.children;
-  if (existingMessages.length === 0) {
-    messageListElement.appendChild(div);
-  } else {
-    let messageListNode = existingMessages[0];
-
-    while (messageListNode) {
-      const messageListNodeTime = messageListNode.getAttribute('timestamp');
-
-      if (!messageListNodeTime) {
-        throw new Error(
-          `Child ${messageListNode.id} has no 'timestamp' attribute`
-        );
-      }
-
-      if (messageListNodeTime > timestamp) {
-        break;
-      }
-
-      messageListNode = messageListNode.nextSibling;
-    }
-
-    messageListElement.insertBefore(div, messageListNode);
-  }
-
-  return div;
-}
-
 function createAndInsertPUser(id) {
   const container = document.createElement('div');
   container.innerHTML = POWER_USER;
@@ -291,38 +251,7 @@ function createAndInsertPUser(id) {
 }
 
 // Displays a Message in the UI.
-function displayMessage(id, timestamp, name, text, picUrl, imageUrl) {
-  var div = document.getElementById(id) || createAndInsertMessage(id, timestamp);
-
-  // profile picture
-  if (picUrl) {
-    div.querySelector('.pic').style.backgroundImage = 'url(' + addSizeToGoogleProfilePic(picUrl) + ')';
-  }
-
-  div.querySelector('.name').textContent = name;
-  var messageElement = div.querySelector('.message');
-
-  if (text) { // If the message is text.
-    messageElement.textContent = text;
-    // Replace all line breaks by <br>.
-    messageElement.innerHTML = messageElement.innerHTML.replace(/\n/g, '<br>');
-  } else if (imageUrl) { // If the message is an image.
-    var image = document.createElement('img');
-    image.addEventListener('load', function () {
-      messageListElement.scrollTop = messageListElement.scrollHeight;
-    });
-    image.src = imageUrl + '&' + new Date().getTime();
-    messageElement.innerHTML = '';
-    messageElement.appendChild(image);
-  }
-  // Show the card fading-in and scroll to view the new message.
-  setTimeout(function () { div.classList.add('visible') }, 1);
-  messageListElement.scrollTop = messageListElement.scrollHeight;
-  messageInputElement.focus();
-}
-
-// Displays a Message in the UI.
-function displayChats(elementId, displayName, photoURL) {
+function displayChats(elementId, displayName, photoURL, chatType) {
   var div = document.getElementById(elementId) || createAndInsertPUser(elementId);
   div.querySelector('.name').textContent = displayName;
   //   div.querySelector('.profilePic').src = "profilepic.png";
@@ -336,14 +265,14 @@ function displayChats(elementId, displayName, photoURL) {
   pUserListElement.scrollTop = pUserListElement.scrollHeight;
 
   div.onclick = function () {
-    onChatClick(displayName);
+    onChatClick(displayName, chatType);
   }
 
 }
 
-function onChatClick(displayName) {
+function onChatClick(displayName, chatType) {
   // window.location.href = "message.html?ou=" + othUsrUid+"&ru="+receiverUid+"&p="+1;
-  // loadMessages(displayName);
+  loadMessages(displayName, chatType);
   chatCardContainer.setAttribute('hidden', true);
   messageCardContainer.removeAttribute('hidden');
   backBtn.removeAttribute('hidden');
