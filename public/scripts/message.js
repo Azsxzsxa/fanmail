@@ -204,6 +204,13 @@ function onMediaFileSelected(event) {
   }
 }
 
+function sendMessageUI() {
+
+  resetMaterialTextfield(messageInputElement);
+  toggleButton();
+}
+
+
 function sendMessage() {
   saveMessage(messageInputElement.value).then(function () {
     // Clear message text field and re-enable the SEND button.
@@ -299,7 +306,7 @@ function sendMessage() {
 // Triggered when the send new message form is submitted.
 function onMessageFormSubmit(e) {
   e.preventDefault();
- //asdf
+  //asdf
   // Check that the user entered a message and is signed in.
   if (output.value < 80) {
     var setSubmitMessage = firebase.functions().httpsCallable('setSubmitMessage');
@@ -308,15 +315,47 @@ function onMessageFormSubmit(e) {
       text: messageInputElement.value,
       chatType: chatType
     }).then(function (result) {
-      console.log(result.data);
+      switch (result.data.retCode) {
+        case NO_ERR:
+          console.log("sent successfully");
+          displayMessage(result.data.id, new Date(), userName, messageInputElement.value, userPic);
+          // const container = document.createElement('div');
+          // container.innerHTML = MESSAGE_TEMPLATE;
+          // const div = container.firstChild;
+          // div.setAttribute('id', "id");
+          // div.setAttribute('timestamp', Date.now());
+          // messageListElement.insertBefore(div, messageListElement[messageListElement.length - 1]);
+          // div.querySelector('.name').textContent = user.displayName;
+          // var messageElement = div.querySelector('.message');
+          // if (messageInputElement.value) { // If the message is text.
+          //   messageElement.textContent = messageInputElement.value;
+          //   messageElement.innerHTML = messageElement.innerHTML.replace(/\n/g, '<br>');
+          // }
+          // setTimeout(function () { div.classList.add('visible') }, 1);
+          // messageListElement.scrollTop = messageListElement.scrollHeight;
+          // messageInputElement.focus();
 
-    }).catch(function (error) {
-      // Getting the Error details.
-      var code = error.code;
-      var message = error.message;
-      var details = error.details;
-      console.log('sending message failed :' + code + message + details);
-      // ...
+          break;
+        case ERR_INBOXLIMIT:
+          console.log("sent failure , inbox limit reached");
+          break;
+        case ERR_WORDLIMIT:
+          console.log("sent failure , word limit reached");
+          break;
+        case ERR_OTHR:
+          console.log("sent failure");
+          break;
+        default:
+          console.log("sent failure, unspecified issue");
+      }
+
+    // }).catch(function (error) {
+    //   // Getting the Error details.
+    //   var code = error.code;
+    //   var message = error.message;
+    //   var details = error.details;
+    //   console.log('sending message failed :' + code + message + details);
+    //   // ...
     });
   } else {
     console.log("too many words");

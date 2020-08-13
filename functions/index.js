@@ -1,24 +1,20 @@
-/**
- * Copyright 2017 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
-// Import the Firebase SDK for Google Cloud Functions.
 const functions = require('firebase-functions');
-// Import and initialize the Firebase Admin SDK.
 const admin = require('firebase-admin');
 admin.initializeApp();
+
+//DB REFS
+const DB_USERS = "users";
+const DB_CONVERSATIONS = "conversations";
+const DB_DATA = "data";
+
+//RET CODES
+const NO_ERR = 0;
+const ERR_OTHR = 100;
+
+const ERR_WORDLIMIT = 101;
+const ERR_INBOXLIMIT = 102;
+
 
 // Adds a message that welcomes new users into the chat.
 // exports.addWelcomeMessages = functions.auth.user().onCreate(async (user) => {
@@ -38,7 +34,7 @@ admin.initializeApp();
 
 exports.getProfile = functions.https.onCall(async (data, context) => {
   const uId = data.data;
-  const userRef = admin.firestore().collection('users').doc(uId);
+  const userRef = admin.firestore().collection(DB_USERS).doc(uId);
   const doc = await userRef.get();
   if (!doc.exists) {
     return 'No such document!';
@@ -75,7 +71,7 @@ exports.getProfile = functions.https.onCall(async (data, context) => {
 
 exports.getChats = functions.https.onCall(async (data, context) => {
   const uId = data.data;
-  const userRef = admin.firestore().collection('users').doc(context.auth.uid).collection("conversations");
+  const userRef = admin.firestore().collection(DB_USERS).doc(context.auth.uid).collection(DB_CONVERSATIONS);
   const snapshot = await userRef.orderBy('timestamp', 'desc').limit(12).get();
   var chats = new Array();
   snapshot.forEach(doc => {
@@ -102,7 +98,7 @@ exports.getChats = functions.https.onCall(async (data, context) => {
 exports.getMessages = functions.https.onCall(async (data, context) => {
   const displayName = data.data;
   const chatType = data.chatType;
-  const otherUserRef = admin.firestore().collection('users');
+  const otherUserRef = admin.firestore().collection(DB_USERS);
   const snapshotUsr = await otherUserRef.where('displayName', '==', displayName).get();
   if (snapshotUsr.empty) {
     console.log('No matching documents.');
@@ -117,7 +113,7 @@ exports.getMessages = functions.https.onCall(async (data, context) => {
     }
   });
 
-  const chatRef = admin.firestore().collection('data').doc('conversations').collection(chatId);
+  const chatRef = admin.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(chatId);
   const snapshot = await chatRef.orderBy('timestamp', 'desc').limit(12).get();
   var messageArray = new Array();
   if (snapshot.empty) {
@@ -142,22 +138,21 @@ exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
   const text = data.text;
   const chatType = data.chatType;
   var otherUserUid;
-  var retVal;
 
   //message length check
   if (text.trim().split(/\s+/).length >= 80) {
-    retVal=100;
+    return { retCode: ERR_WORDLIMIT };
   }
 
-  const otherUsrRef = admin.firestore().collection('users');
+  const otherUsrRef = admin.firestore().collection(DB_USERS);
   const ssOtherUsr = await otherUsrRef.where('displayName', '==', displayName).get();
   if (ssOtherUsr.empty) {
     console.log('No matching documents.');
-    return;
+    return { retCode: ERR_OTHR };
   }
   var chatId;
   var receiverSent = 1;
-  var limitReached=false;
+  var limitReached = false;
   ssOtherUsr.forEach(doc => {
     otherUserUid = doc.id;
     if (chatType == 0) {
@@ -171,17 +166,17 @@ exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
     console.log(doc.data().inboxLimit);
     if (doc.data().inboxNo >= doc.data().inboxLimit) {
       console.log("should ret");
-      limitReached=true;
+      limitReached = true;
     }
   });
-  if(limitReached==true){
-    return 101;
+  if (limitReached == true) {
+    return { retCode: ERR_INBOXLIMIT };
   }
 
 
-  const senderRef = admin.firestore().collection('users').doc(context.auth.uid).collection('conversations').doc(otherUserUid);
-  const receiverRef = admin.firestore().collection('users').doc(otherUserUid).collection('conversations').doc(context.auth.uid);
-  const convRef = admin.firestore().collection('users').doc(context.auth.uid).collection('conversations').doc(otherUserUid);
+  const senderRef = admin.firestore().collection(DB_USERS).doc(context.auth.uid).collection(DB_CONVERSATIONS).doc(otherUserUid);
+  const receiverRef = admin.firestore().collection(DB_USERS).doc(otherUserUid).collection(DB_CONVERSATIONS).doc(context.auth.uid);
+  const convRef = admin.firestore().collection(DB_USERS).doc(context.auth.uid).collection(DB_CONVERSATIONS).doc(otherUserUid);
   const convDoc = await convRef.get();
   if (!convDoc.exists) {
     //new
@@ -208,12 +203,34 @@ exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
       timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    setBatch.update(admin.firestore().collection('users').doc(otherUserUid), {
+    setBatch.update(admin.firestore().collection(DB_USERS).doc(otherUserUid), {
       inboxNo: admin.firestore.FieldValue.increment(1)
     });
 
+    const ref = admin.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(chatId).doc()
+    const id = ref.id;
+    setBatch.set(admin.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(chatId).doc(id), {
+      name: context.auth.token.name,
+      text: text,
+      profilePicUrl: " ",
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
     // var response = await setBatch.commit().catch((err) => { return 102; });
-    await setBatch.commit();
+    // setBatch.commit().then(() => {
+    //   console.log("succesfull batch");
+    //   return 1;
+    // });
+
+    return setBatch.commit().then(() => {
+      return {
+        retCode: NO_ERR,
+        id: id
+      };
+    }).catch(e => {
+      return { retCode: ERR_OTHR };
+    })
+
+    // return 1;
 
   } else {
     //exists
@@ -243,20 +260,40 @@ exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
       });
 
     }
+    const ref = admin.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(chatId).doc()
+    const id = ref.id;
+    updateBatch.set(admin.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(chatId).doc(id), {
+      name: context.auth.token.name,
+      text: text,
+      profilePicUrl: " ",
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
 
     //batch commit
-    await updateBatch.commit();
+    //  updateBatch.commit().then(() => {
+    //   console.log("succesfull batch");
+    //   return 1;
+    // });
     // var response = await updateBatch.commit().catch((err) => { return 102; });
+    return updateBatch.commit().then(() => {
+      return {
+        retCode: NO_ERR,
+        id: id
+      };
+    }).catch(e => {
+      return { retCode: ERR_OTHR };
+    })
+    // return 1;
   }
 
-  const res = await admin.firestore().collection('data').doc('conversations').collection(chatId).add({
-    name: context.auth.token.name,
-    text: text,
-    profilePicUrl: " ",
-    timestamp: admin.firestore.FieldValue.serverTimestamp()
-  });
-  console.log("RES ISSS:"+res);
-  return 1;
+  // const res = await admin.firestore().collection('data').doc('conversations').collection(chatId).add({
+  //   name: context.auth.token.name,
+  //   text: text,
+  //   profilePicUrl: " ",
+  //   timestamp: admin.firestore.FieldValue.serverTimestamp()
+  // });
+  // console.log("RES ISSS:" + res);
+  // return 1;
 
 
 
@@ -277,7 +314,7 @@ exports.adminSet = functions.https.onCall(async (data, context) => {
     };
 
     // Add a new document in collection "cities" with ID 'LA'
-    const res = await admin.firestore().collection('users').doc('33333').set(dataA);
+    const res = await admin.firestore().collection(DB_USERS).doc('33333').set(dataA);
     // [END set_document]
 
     console.log('Set: ', res);
