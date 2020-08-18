@@ -64,7 +64,7 @@ function isUserSignedIn() {
 }
 
 //load influencers on UI
-function loadSuperUsers() {
+function loadPowerUsers() {
   // Create the query to load the last 12 messages and listen for new ones.
   // var query = firebase.firestore()
   //   .collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS)
@@ -136,7 +136,7 @@ function authStateObserver(user) {
     // Hide sign-in button.
     //   signInButtonElement.setAttribute('hidden', 'true');
 
-    loadSuperUsers();
+    loadPowerUsers();
 
     // We save the Firebase Messaging Device token and enable notifications.
     //   saveMessagingDeviceToken();

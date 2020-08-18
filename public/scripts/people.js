@@ -80,26 +80,46 @@ function saveMessage(messageText) {
 
 
 //load influencers on UI
-function loadSuperUsers() {
-  // Create the query to load the last 12 messages and listen for new ones.
-  var query = firebase.firestore()
-    .collection(DB_USERS)
-    .where("type", "==", 1)
-    .limit(12);
+function loadPowerUsers() {
 
-  query.get()
-    .then(function (querySnapshot) {
-      querySnapshot.forEach(function (doc) {
-        // doc.data() is never undefined for query doc snapshots
-        console.log(doc.id, " => ", doc.data());
-        //   console.log(doc.data().profilePic);
-        displayChats(doc.id, doc.data().displayName, doc.data().photoURL);
-
-      });
-    })
-    .catch(function (error) {
-      console.log("Error getting documents: ", error);
+  var getPowerUsers = firebase.functions().httpsCallable('getPowerUsers');
+  getPowerUsers({ data: userUid }).then(function (result) {
+    result.data.forEach(element => {
+      displayChats(element.elementId, element.displayName, element.photoURL);
     });
+  }).catch(function (error) {
+    // Getting the Error details.
+    var code = error.code;
+    var message = error.message;
+    var details = error.details;
+    console.log("loading power users failed" + code + message + details);
+    // ...
+  });
+
+
+
+
+
+
+  // Create the query to load the last 12 messages and listen for new ones.
+  // var query = firebase.firestore()
+  //   .collection(DB_USERS)
+  //   .where("type", "==", 1)
+  //   .limit(12);
+
+  // query.get()
+  //   .then(function (querySnapshot) {
+  //     querySnapshot.forEach(function (doc) {
+  //       // doc.data() is never undefined for query doc snapshots
+  //       console.log(doc.id, " => ", doc.data());
+  //       //   console.log(doc.data().profilePic);
+  //       displayChats(doc.id, doc.data().displayName, doc.data().photoURL);
+
+  //     });
+  //   })
+  //   .catch(function (error) {
+  //     console.log("Error getting documents: ", error);
+  //   });
 }
 
 // Saves a new message containing an image in Firebase.
@@ -163,7 +183,7 @@ function onMediaFileSelected(event) {
 function onMessageFormSubmit(e) {
   e.preventDefault();
   // Check that the user entered a message and is signed in.
-  if (messageInputElement.value && checkSignedInWithMessage() && output.value <80) {
+  if (messageInputElement.value && checkSignedInWithMessage() && output.value < 80) {
     saveMessage(messageInputElement.value).then(function () {
       // Clear message text field and re-enable the SEND button.
       resetMaterialTextfield(messageInputElement);
@@ -245,7 +265,7 @@ function onMessageFormSubmit(e) {
 
       });
     });
-  }else{
+  } else {
     console.log("too many words");
   }
 }
@@ -272,7 +292,7 @@ function authStateObserver(user) {
     // Hide sign-in button.
     //   signInButtonElement.setAttribute('hidden', 'true');
 
-    loadSuperUsers();
+    loadPowerUsers();
 
     // We save the Firebase Messaging Device token and enable notifications.
     //   saveMessagingDeviceToken();
@@ -602,7 +622,7 @@ backBtn.onclick = function () {
 
 // initialize Firebase
 messageCardContainer.setAttribute('hidden', true);
-backBtn.setAttribute('hidden',true);
+backBtn.setAttribute('hidden', true);
 initFirebaseAuth();
 
 // TODO: Enable Firebase Performance Monitoring.

@@ -133,6 +133,25 @@ exports.getMessages = functions.https.onCall(async (data, context) => {
 });
 
 
+exports.getPowerUsers = functions.https.onCall(async (data, context) => {
+  const pUserRef = admin.firestore().collection(DB_USERS);
+  const snapshotPUsr = await pUserRef.where('type', '==', 1).limit(12).get();
+  if (snapshotPUsr.empty) {
+    console.log('No matching documents.');
+    return;
+  }
+  var pUserArray = new Array();
+  snapshotPUsr.forEach(doc => {
+    pUserArray.push({
+      elementId: doc.id,
+      displayName: doc.data().displayName,
+      photoURL: doc.data().photoURL
+    });
+  });
+  return pUserArray;
+});
+
+
 exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
   const displayName = data.displayName;
   const text = data.text;
@@ -187,8 +206,7 @@ exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
       replied: 0,
       displayName: otherUserName,
       photoURL: otherUserPic,
-      // text: messageText,
-      // profilePicUrl: getProfilePicUrl(),
+      lastMessage: text,
       timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
 
@@ -198,8 +216,7 @@ exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
       replied: 0,
       displayName: userName,
       photoURL: userPic,
-      // text: messageText,
-      // profilePicUrl: getProfilePicUrl(),
+      lastMessage: text,
       timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
 
@@ -213,13 +230,9 @@ exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
       name: context.auth.token.name,
       text: text,
       profilePicUrl: " ",
+      lastMessage: text,
       timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
-    // var response = await setBatch.commit().catch((err) => { return 102; });
-    // setBatch.commit().then(() => {
-    //   console.log("succesfull batch");
-    //   return 1;
-    // });
 
     return setBatch.commit().then(() => {
       return {
@@ -230,7 +243,6 @@ exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
       return { retCode: ERR_OTHR };
     })
 
-    // return 1;
 
   } else {
     //exists
@@ -239,20 +251,24 @@ exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
       //message from pUser
       updateBatch.update(senderRef, {
         "replied": 1,
+        lastMessage: text,
         "timestamp": admin.firestore.FieldValue.serverTimestamp()
       });
       updateBatch.update(receiverRef, {
         "replied": 1,
+        lastMessage: text,
         "timestamp": admin.firestore.FieldValue.serverTimestamp()
       });
     } else {
       //new message to pUser
       updateBatch.update(senderRef, {
         "replied": 0,
+        lastMessage: text,
         "timestamp": admin.firestore.FieldValue.serverTimestamp()
       });
       updateBatch.update(receiverRef, {
         "replied": 0,
+        lastMessage: text,
         "timestamp": admin.firestore.FieldValue.serverTimestamp()
       });
       updateBatch.update(admin.firestore().collection('users').doc(otherUserUid), {
@@ -269,12 +285,6 @@ exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
       timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    //batch commit
-    //  updateBatch.commit().then(() => {
-    //   console.log("succesfull batch");
-    //   return 1;
-    // });
-    // var response = await updateBatch.commit().catch((err) => { return 102; });
     return updateBatch.commit().then(() => {
       return {
         retCode: NO_ERR,
@@ -283,21 +293,7 @@ exports.setSubmitMessage = functions.https.onCall(async (data, context) => {
     }).catch(e => {
       return { retCode: ERR_OTHR };
     })
-    // return 1;
   }
-
-  // const res = await admin.firestore().collection('data').doc('conversations').collection(chatId).add({
-  //   name: context.auth.token.name,
-  //   text: text,
-  //   profilePicUrl: " ",
-  //   timestamp: admin.firestore.FieldValue.serverTimestamp()
-  // });
-  // console.log("RES ISSS:" + res);
-  // return 1;
-
-
-
-
 
 });
 
