@@ -45,7 +45,28 @@ const app = {
         const params = new URLSearchParams(location.search);
         params.set('test', 123);
         params.set('cheese', 'yummy');
-        history.pushState({}, currentPage, `?${params.toString()}`+`#${currentPage}` );
+        // history.pushState({}, currentPage, `?${params.toString()}`+`#${currentPage}` );
+        switch (currentPage) {
+            case 'home':
+                _queryString = "homeTest=homee";
+                break;
+            case 'list':
+                _queryString = "listTest=listtt&user=123456";
+                break;
+            case 'detail':
+                _queryString = "test=homedetail";
+                // expected output: "Mangoes and papayas are $2.79 a pound."
+                break;
+            default:
+                _queryString = "";
+        }
+        if (_queryString == "") {
+            console.log("empty qS");
+            history.pushState({}, currentPage, `#${currentPage}`);
+        } else {
+            history.pushState({}, currentPage, `?${_queryString}` + `#${currentPage}`);
+        }
+
         document.getElementById(currentPage).dispatchEvent(app.show);
     },
     pageShown: function (ev) {
@@ -56,17 +77,18 @@ const app = {
             h.classList.remove('big');
         }, 1200, h1);
         var url_string = window.location.href;
-        console.log('query string ' + url_string);
         var url = new URL(url_string);
-        console.log('query string ' + url);
-        var c = url.searchParams.get("test");
-        console.log('query string ' + c);
         switch (ev.target.id) {
             case 'home':
                 console.log('Home page switch');
+                var homeTest = url.searchParams.get("homeTest");
+                console.log('query string ' + homeTest);
                 break;
             case 'list':
                 console.log('List page switch');
+                var listTest = url.searchParams.get("listTest");
+                var user = url.searchParams.get("user");
+                console.log('query string ' + listTest+'user '+user);
                 break;
             case 'detail':
                 console.log('Detail page switch');
@@ -75,6 +97,7 @@ const app = {
             default:
                 console.log(`No page`);
         }
+        _queryString = "";
     },
     poppin: function (ev) {
         console.log(location.hash, 'popstate event');
@@ -99,4 +122,5 @@ const app = {
     }
 }
 
+var _queryString = "";
 document.addEventListener('DOMContentLoaded', app.init);
