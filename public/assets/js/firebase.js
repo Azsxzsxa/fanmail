@@ -1,6 +1,7 @@
 function authStateObserver(user) {
     if (user) {
         console.log("user logged");
+        _userUid = user.uid;
     } else {
         console.log("user not logged");
         window.location.href = "login.html";
@@ -21,4 +22,5 @@ function signOut() {
     });
 }
 
+var _userUid;
 initFirebaseAuth();
