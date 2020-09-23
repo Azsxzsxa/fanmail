@@ -1,0 +1,7 @@
+/* normal */
+@font-face {
+  font-family: 'BR-Candor';
+  font-style: normal;
+  font-weight: 300;
+  src: local('BR Candor'), url(BR-Candor/brink-brcandorregular-webfont.woff) format('woff');
+}
