@@ -105,12 +105,18 @@ exports.getMessages = functions.https.onCall(async(data, context) => {
         return;
     }
     var chatId;
+    var otherUserName;
+    var otherUserDescr;
+    var otherUserPic;
     snapshotUsr.forEach(doc => {
         if (chatType == 0) {
             chatId = context.auth.uid.concat(doc.id);
         } else {
             chatId = doc.id.concat(context.auth.uid);
         }
+        otherUserName = doc.data().displayName;
+        otherUserDescr = doc.data().description;
+        otherUserPic = doc.data().photoURL;
     });
 
     const chatRef = admin.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(chatId);
@@ -129,7 +135,12 @@ exports.getMessages = functions.https.onCall(async(data, context) => {
             photoURL: doc.data().profilePicUrl
         });
     });
-    return messageArray;
+    return {
+        messageArray,
+        otherUserName,
+        otherUserDescr,
+        otherUserPic
+    };
 });
 
 

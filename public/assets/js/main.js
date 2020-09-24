@@ -1,22 +1,5 @@
 $(document).ready(function() {
-    // var nav_open = $("#nav-open");
-    // $(nav_open).click(function () {
-    //     if ($(nav_open).hasClass("m-l-2220")) {
-    //         $(nav_open).removeClass("m-l-2220");
-    //     } else {
-    //         $(nav_open).addClass("m-l-2220");
-    //     }
-    // });
-    // var nav_open_2 = $("#nav-open-2");
-    // $(nav_open_2).click(function () {
-    //     if ($(nav_open_2).hasClass("m-l-2220")) {
-    //         $(nav_open_2).removeClass("m-l-2220");
-    //     } else {
-    //         $(nav_open_2).addClass("m-l-2220");
-    //     }
-    // });
-    // var pageURL = $(location).attr("href");
-    let pageName = document.location.href.match(/[^\/]+$/)[0];
+    let pageName = document.location.pathname.match(/[^\/]+$/)[0];
     switch (pageName) {
         case "inbox":
             inboxGetChats();
@@ -26,6 +9,9 @@ $(document).ready(function() {
             break;
         case "profile":
             // code block
+            break;
+        case "message":
+            messageLoadMessages();
             break;
         default:
             // code block
@@ -43,6 +29,12 @@ var CHAT_CARD =
     '<div class="send-message"></div>' +
     '<span class="message-time"></span>' +
     '</div>' +
+    '</div>';
+
+var MESSAGE_CARD =
+    '<div class="chat-content">' +
+    '<div class="chat-message box bg-light-info"></div>' +
+    '<div class="chat-time send-receive-time"></div>' +
     '</div>';
 
 function inboxGetChats() {
@@ -69,11 +61,12 @@ function inboxDisplayChats(elementId, userName, lastMessage, photoURL, chatType,
     } else {
         section = document.getElementById('new-section');
     }
+
     let date = new Date(timestamp._seconds * 1000);
     let ye = new Intl.DateTimeFormat('en', { year: 'numeric' }).format(date);
     let mo = new Intl.DateTimeFormat('en', { month: 'short' }).format(date);
     let da = new Intl.DateTimeFormat('en', { day: '2-digit' }).format(date);
-    console.log(`${da}-${mo}-${ye}`);
+
     const container = document.createElement('a');
     container.id = elementId;
     container.innerHTML = CHAT_CARD;
@@ -81,9 +74,92 @@ function inboxDisplayChats(elementId, userName, lastMessage, photoURL, chatType,
     container.querySelector('.send-message').textContent = lastMessage;
     container.querySelector('.message-time').textContent = "" + da + " " + mo;
     section.appendChild(container);
-    userName = userName.replace(/\s/g, '');
     container.onclick = function() {
-        window.location.href = "message.html?name=" + userName;
+        sessionStorage.setItem('displayName', userName);
+        sessionStorage.setItem('chatType', chatType);
+        window.location.href = "message.html";
     }
 
+}
+
+function messageLoadMessages() {
+    let displayName = sessionStorage.getItem('displayName');
+    let chatType = sessionStorage.getItem('chatType')
+    console.log(`name=${displayName} chatType= ${chatType}`);
+    var getMessages = firebase.functions().httpsCallable('getMessages');
+    getMessages({
+        data: displayName,
+        chatType: chatType
+    }).then(function(result) {
+        console.log("loading messages");
+        //set name , desc , pic 
+        document.getElementById("user-name").innerHTML = result.data.otherUserName;
+        document.getElementById("user-desc").innerHTML = result.data.otherUserDescr;
+        result.data.messageArray.forEach(message => {
+            messageDisplayMessages(message.elementId, message.timestamp, message.displayName,
+                message.text, message.photoURL);
+        });
+    }).catch(function(error) {
+        // Getting the Error details.
+        var code = error.code;
+        var message = error.message;
+        var details = error.details;
+        console.log('loading messages failed :' + code + message + details);
+        // ...
+    });
+}
+
+function messageDisplayMessages(elementId, timestamp, displayName,
+    text, photoURL) {
+    let section = document.getElementById('chat-list');
+    const container = document.createElement('li');
+    const existingMessages = section.children;
+
+    var date = new Date(timestamp._seconds * 1000);
+    date = date ? date.getTime() : Date.now();
+    container.setAttribute('timestamp', date);
+
+
+    if (existingMessages.length === 0) {
+        section.appendChild(container);
+    } else {
+        let messageListNode = existingMessages[0];
+
+        while (messageListNode) {
+            const messageListNodeTime = messageListNode.getAttribute('timestamp');
+
+            if (!messageListNodeTime) {
+                throw new Error(
+                    `Child ${messageListNode.id} has no 'timestamp' attribute`
+                );
+            }
+
+            if (messageListNodeTime > date) {
+                break;
+            }
+
+            messageListNode = messageListNode.nextSibling;
+        }
+
+        section.insertBefore(container, messageListNode);
+    }
+
+    var n = _userDisplayName.localeCompare(displayName);
+    if (n == 0) {
+        container.classList.add('reverse');
+    }
+
+    let displayTime = Intl.DateTimeFormat('default', {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric'
+    }).format(date)
+
+    container.id = elementId;
+    container.innerHTML = MESSAGE_CARD;
+    container.querySelector('.chat-message').textContent = text;
+    container.querySelector('.chat-time').textContent = displayTime;
+    $("#chat-div").scrollTop($("#chat-div")[0].scrollHeight);
 }
