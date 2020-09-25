@@ -5,7 +5,7 @@ $(document).ready(function() {
             inboxGetChats();
             break;
         case "people":
-            // code block
+            peopleGetPeople();
             break;
         case "profile":
             // code block
@@ -35,6 +35,17 @@ var MESSAGE_CARD =
     '<div class="chat-content">' +
     '<div class="chat-message box bg-light-info"></div>' +
     '<div class="chat-time send-receive-time"></div>' +
+    '</div>';
+
+var PEOPLE_CARD =
+    '<div class="card user-profile">' +
+    '<div class="user-profile-pic">' +
+    '<a href="javascript:void(0)"><img class="card-img-top img-responsive" src="assets/images/big/img1.jpg" alt="Card image cap"></a>' +
+    '</div>' +
+    '<div class="card-body user-profile-body">' +
+    '<h4 class="card-title user-name"><a href="javascript:void(0)" class="text-dark"></a></h4>' +
+    '<p class="card-text user-message"><a href="javascript:void(0)" class="text-dark"></a></p>' +
+    ' </div>' +
     '</div>';
 
 function inboxGetChats() {
@@ -88,27 +99,27 @@ function messageLoadMessages() {
     console.log(`name=${displayName} chatType= ${chatType}`);
     var getMessages = firebase.functions().httpsCallable('getMessages');
     getMessages({
-            data: displayName,
-            chatType: chatType
-        }).then(function(result) {
-            console.log("loading messages");
-            //set name , desc , pic 
-            document.getElementById("user-name").innerHTML = result.data.otherUserName;
-            document.getElementById("user-desc").innerHTML = result.data.otherUserDescr;
-            result.data.messageArray.forEach(message => {
-                var date = new Date(message.timestamp._seconds * 1000);
-                messageDisplayMessages(message.elementId, date, message.displayName,
-                    message.text, message.photoURL);
-            });
-        })
-        .catch(function(error) {
-            // Getting the Error details.
-            var code = error.code;
-            var message = error.message;
-            var details = error.details;
-            console.log('loading messages failed :' + code + message + details);
-            // ...
+        data: displayName,
+        chatType: chatType
+    }).then(function(result) {
+        console.log("loading messages");
+        //set name , desc , pic 
+        document.getElementById("user-name").innerHTML = result.data.otherUserName;
+        document.getElementById("user-desc").innerHTML = result.data.otherUserDescr;
+        result.data.messageArray.forEach(message => {
+            var date = new Date(message.timestamp._seconds * 1000);
+            messageDisplayMessages(message.elementId, date, message.displayName,
+                message.text, message.photoURL);
         });
+    });
+    // .catch(function(error) {
+    //     // Getting the Error details.
+    //     var code = error.code;
+    //     var message = error.message;
+    //     var details = error.details;
+    //     console.log('loading messages failed :' + code + message + details);
+    //     // ...
+    // });
 
     $("#message-send-txt").on("keyup", function() {
         var words = $("#message-send-txt").val().match(/(\w+)/g);
@@ -203,5 +214,40 @@ function messageSendMessage() {
         });
     } else {
         console.log("too many words");
+    }
+}
+
+function peopleGetPeople() {
+    var getPowerUsers = firebase.functions().httpsCallable('getPowerUsers');
+    getPowerUsers({ data: _userUid }).then(function(result) {
+        result.data.forEach(element => {
+            peopleDisplayPeople(element.elementId, element.displayName, element.photoURL, element.description);
+        });
+    }).catch(function(error) {
+        // Getting the Error details.
+        var code = error.code;
+        var message = error.message;
+        var details = error.details;
+        console.log("loading power users failed" + code + message + details);
+        // ...
+    });
+}
+
+function peopleDisplayPeople(elementId, displayName, photoURL, description) {
+    section = document.getElementById('people-container');
+
+    const container = document.createElement('div');
+    container.id = elementId;
+    container.classList.add("col-lg-2");
+    container.classList.add("col-md-12");
+    container.classList.add("profile-page");
+    container.innerHTML = PEOPLE_CARD;
+    container.querySelector('.card-title').textContent = displayName;
+    container.querySelector('.card-text').textContent = description;
+    section.appendChild(container);
+    container.onclick = function() {
+        sessionStorage.setItem('displayName', displayName);
+        sessionStorage.setItem('chatType', 0);
+        window.location.href = "message.html";
     }
 }

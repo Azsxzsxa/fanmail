@@ -156,7 +156,8 @@ exports.getPowerUsers = functions.https.onCall(async(data, context) => {
         pUserArray.push({
             elementId: doc.id,
             displayName: doc.data().displayName,
-            photoURL: doc.data().photoURL
+            photoURL: doc.data().photoURL,
+            description: doc.data().description
         });
     });
     return pUserArray;
