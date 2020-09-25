@@ -88,34 +88,43 @@ function messageLoadMessages() {
     console.log(`name=${displayName} chatType= ${chatType}`);
     var getMessages = firebase.functions().httpsCallable('getMessages');
     getMessages({
-        data: displayName,
-        chatType: chatType
-    }).then(function(result) {
-        console.log("loading messages");
-        //set name , desc , pic 
-        document.getElementById("user-name").innerHTML = result.data.otherUserName;
-        document.getElementById("user-desc").innerHTML = result.data.otherUserDescr;
-        result.data.messageArray.forEach(message => {
-            messageDisplayMessages(message.elementId, message.timestamp, message.displayName,
-                message.text, message.photoURL);
+            data: displayName,
+            chatType: chatType
+        }).then(function(result) {
+            console.log("loading messages");
+            //set name , desc , pic 
+            document.getElementById("user-name").innerHTML = result.data.otherUserName;
+            document.getElementById("user-desc").innerHTML = result.data.otherUserDescr;
+            result.data.messageArray.forEach(message => {
+                var date = new Date(message.timestamp._seconds * 1000);
+                messageDisplayMessages(message.elementId, date, message.displayName,
+                    message.text, message.photoURL);
+            });
+        })
+        .catch(function(error) {
+            // Getting the Error details.
+            var code = error.code;
+            var message = error.message;
+            var details = error.details;
+            console.log('loading messages failed :' + code + message + details);
+            // ...
         });
-    }).catch(function(error) {
-        // Getting the Error details.
-        var code = error.code;
-        var message = error.message;
-        var details = error.details;
-        console.log('loading messages failed :' + code + message + details);
-        // ...
+
+    $("#message-send-txt").on("keyup", function() {
+        var words = $("#message-send-txt").val().match(/(\w+)/g);
+        $("#message-word-count").text(words ? words.length : 0);
     });
+
+
 }
 
-function messageDisplayMessages(elementId, timestamp, displayName,
+function messageDisplayMessages(elementId, date, displayName,
     text, photoURL) {
     let section = document.getElementById('chat-list');
     const container = document.createElement('li');
     const existingMessages = section.children;
 
-    var date = new Date(timestamp._seconds * 1000);
+    // var date = new Date(timestamp._seconds * 1000);
     date = date ? date.getTime() : Date.now();
     container.setAttribute('timestamp', date);
 
@@ -162,4 +171,37 @@ function messageDisplayMessages(elementId, timestamp, displayName,
     container.querySelector('.chat-message').textContent = text;
     container.querySelector('.chat-time').textContent = displayTime;
     $("#chat-div").scrollTop($("#chat-div")[0].scrollHeight);
+}
+
+function messageSendMessage() {
+
+    if (parseInt($("#message-word-count").text()) <= 80) {
+        var setSubmitMessage = firebase.functions().httpsCallable('setSubmitMessage');
+        setSubmitMessage({
+            displayName: sessionStorage.getItem('displayName'),
+            text: $("#message-send-txt").val(),
+            chatType: sessionStorage.getItem('chatType')
+        }).then(function(result) {
+            switch (result.data.retCode) {
+                case NO_ERR:
+                    console.log("sent successfully");
+                    messageDisplayMessages(result.data.id, new Date(), _userDisplayName, $("#message-send-txt").val(), _userPic);
+                    $("#message-send-txt").val("");
+                    break;
+                case ERR_INBOXLIMIT:
+                    console.log("sent failure , inbox limit reached");
+                    break;
+                case ERR_WORDLIMIT:
+                    console.log("sent failure , word limit reached");
+                    break;
+                case ERR_OTHR:
+                    console.log("sent failure");
+                    break;
+                default:
+                    console.log("sent failure, unspecified issue");
+            }
+        });
+    } else {
+        console.log("too many words");
+    }
 }

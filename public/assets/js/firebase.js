@@ -3,6 +3,7 @@ function authStateObserver(user) {
         console.log("user logged");
         _userUid = user.uid;
         _userDisplayName = user.displayName;
+        _userPic = user.PhotoUrl;
     } else {
         console.log("user not logged");
         window.location.href = "login.html";
@@ -25,4 +26,5 @@ function signOut() {
 
 var _userUid;
 var _userDisplayName;
+var _userPic;
 initFirebaseAuth();

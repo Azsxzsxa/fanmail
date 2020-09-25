@@ -134,13 +134,16 @@
                                     <div class="card-body border-top h-25">
                                         <div class="row align-items-center">
                                             <div class="col-lg-10 col-8">
-                                                <textarea placeholder="Type your message here" class="form-control border-0"></textarea>
+                                                <p id="message-word-count"></p>
+                                                <textarea id="message-send-txt" placeholder="Type your message here" class="form-control border-0"></textarea>
                                             </div>
                                             <div class="col-lg-2 col-4 text-right">
-                                                <button type="button" class="btn btn-info btn-circle btn-lg" style="width: 45px;height: 45px;padding: 10px 14px;transform: rotate(-51deg);">
+                                                <button id="message-send-btn" onclick="messageSendMessage()" type="button" class="btn btn-info btn-circle btn-lg" style="width: 45px;height: 45px;padding: 10px 14px;transform: rotate(-51deg);">
                                             <i class="mdi mdi-send"></i>
                                         </button>
+
                                             </div>
+
                                         </div>
                                     </div>
                                 </div>
@@ -173,6 +176,7 @@
     <script src="https://www.gstatic.com/firebasejs/7.16.1/firebase-functions.js"></script>
     <script src="/__/firebase/init.js"></script>
     <script src="assets/js/firebase.js"></script>
+    <script src="assets/js/consts.js"></script>
     <script src="assets/js/main.js"></script>
     <script src="assets/node_modules/moment/moment.js"></script>
     <script src="assets/node_modules/footable/js/footable.min.js"></script>
