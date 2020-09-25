@@ -99,6 +99,7 @@ exports.getMessages = functions.https.onCall(async(data, context) => {
     const displayName = data.data;
     const chatType = data.chatType;
     const otherUserRef = admin.firestore().collection(DB_USERS);
+    console.log('look for displayName:' + displayName);
     const snapshotUsr = await otherUserRef.where('displayName', '==', displayName).get();
     if (snapshotUsr.empty) {
         console.log('No matching documents.');
@@ -123,8 +124,13 @@ exports.getMessages = functions.https.onCall(async(data, context) => {
     const snapshot = await chatRef.orderBy('timestamp', 'desc').limit(12).get();
     var messageArray = new Array();
     if (snapshot.empty) {
-        console.log('No matching documents.');
-        return;
+        console.log('No matching conversation documents.');
+        return {
+            messageArray,
+            otherUserName,
+            otherUserDescr,
+            otherUserPic
+        };
     }
     snapshot.forEach(doc => {
         messageArray.push({
@@ -168,7 +174,12 @@ exports.setSubmitMessage = functions.https.onCall(async(data, context) => {
     const displayName = data.displayName;
     const text = data.text;
     const chatType = data.chatType;
+    const userUid = context.auth.uid;
+    const userName = context.auth.token.name;
+    const userPic = context.auth.token.picture;
     var otherUserUid;
+    var otherUserName;
+    var otherUserPic;
 
     //message length check
     if (text.trim().split(/\s+/).length >= 80) {
@@ -186,6 +197,8 @@ exports.setSubmitMessage = functions.https.onCall(async(data, context) => {
     var limitReached = false;
     ssOtherUsr.forEach(doc => {
         otherUserUid = doc.id;
+        otherUserName = doc.data().displayName;
+        otherUserPic = doc.data().photoURL;
         if (chatType == 0) {
             chatId = context.auth.uid.concat(doc.id);
         } else {
@@ -214,7 +227,7 @@ exports.setSubmitMessage = functions.https.onCall(async(data, context) => {
         var setBatch = admin.firestore().batch();
         setBatch.set(senderRef, {
             senderUid: userUid,
-            receiverUid: othUsrUid,
+            receiverUid: otherUserUid,
             replied: 0,
             displayName: otherUserName,
             photoURL: otherUserPic,
@@ -224,7 +237,7 @@ exports.setSubmitMessage = functions.https.onCall(async(data, context) => {
 
         setBatch.set(receiverRef, {
             senderUid: userUid,
-            receiverUid: othUsrUid,
+            receiverUid: otherUserUid,
             replied: 0,
             displayName: userName,
             photoURL: userPic,

@@ -96,12 +96,13 @@ function inboxDisplayChats(elementId, userName, lastMessage, photoURL, chatType,
 function messageLoadMessages() {
     let displayName = sessionStorage.getItem('displayName');
     let chatType = sessionStorage.getItem('chatType')
-    console.log(`name=${displayName} chatType= ${chatType}`);
+
     var getMessages = firebase.functions().httpsCallable('getMessages');
     getMessages({
         data: displayName,
         chatType: chatType
     }).then(function(result) {
+        console.log(result);
         console.log("loading messages");
         //set name , desc , pic 
         document.getElementById("user-name").innerHTML = result.data.otherUserName;
@@ -220,6 +221,7 @@ function messageSendMessage() {
 function peopleGetPeople() {
     var getPowerUsers = firebase.functions().httpsCallable('getPowerUsers');
     getPowerUsers({ data: _userUid }).then(function(result) {
+
         result.data.forEach(element => {
             peopleDisplayPeople(element.elementId, element.displayName, element.photoURL, element.description);
         });
