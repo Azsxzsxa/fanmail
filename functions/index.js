@@ -6,10 +6,12 @@ admin.initializeApp();
 const DB_USERS = "users";
 const DB_CONVERSATIONS = "conversations";
 const DB_DATA = "data";
+const DB_MESSAGES = "messages";
 
 //RET CODES
 const NO_ERR = 0;
 const ERR_OTHR = 100;
+const ERR_WRITEDB = 103;
 
 const ERR_WORDLIMIT = 101;
 const ERR_INBOXLIMIT = 102;
@@ -69,18 +71,10 @@ exports.getProfile = functions.https.onCall(async(data, context) => {
 
 
 exports.getChats = functions.https.onCall(async(data, context) => {
-    const uId = data.data;
     const userRef = admin.firestore().collection(DB_USERS).doc(context.auth.uid).collection(DB_CONVERSATIONS);
     const snapshot = await userRef.orderBy('timestamp', 'desc').limit(12).get();
     var chats = new Array();
     snapshot.forEach(doc => {
-        // var data=doc.data();
-        // data.elementId=doc.id;
-        // data.userName= doc.data().displayName;
-        // data.photoURL= doc.data().photoURL;
-        // data.replied= doc.data().replied;
-        // data.timestamp= doc.data().timestamp;
-        var chatType = context.auth.uid.localeCompare(doc.data().senderUid);
         chats.push({
             elementId: doc.id,
             userName: doc.data().displayName,
@@ -88,7 +82,7 @@ exports.getChats = functions.https.onCall(async(data, context) => {
             replied: doc.data().replied,
             timestamp: doc.data().timestamp,
             lastMessage: doc.data().lastMessage,
-            chatType: chatType
+            chatType: doc.data().chatType
         });
     });
     return chats;
@@ -192,25 +186,18 @@ exports.setSubmitMessage = functions.https.onCall(async(data, context) => {
         console.log('No matching documents.');
         return { retCode: ERR_OTHR };
     }
-    var chatId;
-    var receiverSent = 1;
+
     var limitReached = false;
     ssOtherUsr.forEach(doc => {
         otherUserUid = doc.id;
         otherUserName = doc.data().displayName;
         otherUserPic = doc.data().photoURL;
-        if (chatType == 0) {
-            chatId = context.auth.uid.concat(doc.id);
-        } else {
-            chatId = doc.id.concat(context.auth.uid);
-            receiverSent = 0;
-        }
+
         //power user limit check
-        console.log(doc.data().inboxNo);
-        console.log(doc.data().inboxLimit);
-        if (doc.data().inboxNo >= doc.data().inboxLimit) {
-            console.log("should ret");
-            limitReached = true;
+        if (doc.data().type == 1) {
+            if (doc.data().inboxNo >= doc.data().inboxLimit) {
+                limitReached = true;
+            }
         }
     });
     if (limitReached == true) {
@@ -218,79 +205,85 @@ exports.setSubmitMessage = functions.https.onCall(async(data, context) => {
     }
 
 
-    const senderRef = admin.firestore().collection(DB_USERS).doc(context.auth.uid).collection(DB_CONVERSATIONS).doc(otherUserUid);
-    const receiverRef = admin.firestore().collection(DB_USERS).doc(otherUserUid).collection(DB_CONVERSATIONS).doc(context.auth.uid);
-    const convRef = admin.firestore().collection(DB_USERS).doc(context.auth.uid).collection(DB_CONVERSATIONS).doc(otherUserUid);
-    const convDoc = await convRef.get();
-    if (!convDoc.exists) {
-        //new
-        var setBatch = admin.firestore().batch();
-        setBatch.set(senderRef, {
-            senderUid: userUid,
-            receiverUid: otherUserUid,
-            replied: 0,
-            displayName: otherUserName,
-            photoURL: otherUserPic,
-            lastMessage: text,
-            timestamp: admin.firestore.FieldValue.serverTimestamp()
-        });
+    let userMessagesId;
+    let otherUserMessageId;
+    let chatExists = false;
+    const userRef = admin.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS);
+    const otherUserRef = admin.firestore().collection(DB_USERS).doc(otherUserUid).collection(DB_CONVERSATIONS);
+    if (chatType == 0) {
+        console.log("CHAT TYPE = 0");
+        const userChatQuery = await userRef.where('receiverUid', '==', otherUserUid).where("chatType", "==", 0).get();
+        if (userChatQuery.empty) {
+            chatExists = false;
+        } else {
+            userChatQuery.forEach(doc => {
+                chatExists = true;
+                userMessagesId = doc.id;
+            });
+        }
 
-        setBatch.set(receiverRef, {
-            senderUid: userUid,
-            receiverUid: otherUserUid,
-            replied: 0,
-            displayName: userName,
-            photoURL: userPic,
-            lastMessage: text,
-            timestamp: admin.firestore.FieldValue.serverTimestamp()
-        });
+        const otherUserChatQuery = await otherUserRef.where('senderUid', '==', userUid).where("chatType", "==", 1).get();
+        if (otherUserChatQuery.empty) {
+            chatExists = false;
+        } else {
+            otherUserChatQuery.forEach(doc => {
+                chatExists = true;
+                otherUserMessageId = doc.id;
+            });
+        }
 
-        setBatch.update(admin.firestore().collection(DB_USERS).doc(otherUserUid), {
-            inboxNo: admin.firestore.FieldValue.increment(1)
-        });
-
-        const ref = admin.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(chatId).doc()
-        const id = ref.id;
-        setBatch.set(admin.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(chatId).doc(id), {
-            name: context.auth.token.name,
-            text: text,
-            profilePicUrl: " ",
-            timestamp: admin.firestore.FieldValue.serverTimestamp()
-        });
-
-        return setBatch.commit().then(() => {
-            return {
-                retCode: NO_ERR,
-                id: id
-            };
-        }).catch(e => {
-            return { retCode: ERR_OTHR };
-        })
 
 
     } else {
+        console.log("CHAT TYPE = 1");
+        const userChatQuery = await userRef.where('senderUid', '==', otherUserUid).where("chatType", "==", 1).get();
+        if (userChatQuery.empty) {
+            chatExists = false;
+        } else {
+            userChatQuery.forEach(doc => {
+                chatExists = true;
+                userMessagesId = doc.id;
+            });
+        }
+
+        const otherUserChatQuery = await otherUserRef.where('receiverUid', '==', userUid).where("chatType", "==", 0).get();
+        if (otherUserChatQuery.empty) {
+            chatExists = false;
+        } else {
+            otherUserChatQuery.forEach(doc => {
+                chatExists = true;
+                otherUserMessageId = doc.id;
+            });
+        }
+
+    }
+
+    console.log("ChAT EXISTS:" + chatExists);
+    if (chatExists) {
         //exists
+        const userMessageRef = userRef.doc(userMessagesId);
+        const otherUserMessageRef = otherUserRef.doc(otherUserMessageId);
         var updateBatch = admin.firestore().batch();
-        if (receiverSent == 0) {
+        if (chatType == 1) {
             //message from pUser
-            updateBatch.update(senderRef, {
+            updateBatch.update(userMessageRef, {
                 "replied": 1,
                 lastMessage: text,
                 "timestamp": admin.firestore.FieldValue.serverTimestamp()
             });
-            updateBatch.update(receiverRef, {
+            updateBatch.update(otherUserMessageRef, {
                 "replied": 1,
                 lastMessage: text,
                 "timestamp": admin.firestore.FieldValue.serverTimestamp()
             });
         } else {
             //new message to pUser
-            updateBatch.update(senderRef, {
+            updateBatch.update(userMessageRef, {
                 "replied": 0,
                 lastMessage: text,
                 "timestamp": admin.firestore.FieldValue.serverTimestamp()
             });
-            updateBatch.update(receiverRef, {
+            updateBatch.update(otherUserMessageRef, {
                 "replied": 0,
                 lastMessage: text,
                 "timestamp": admin.firestore.FieldValue.serverTimestamp()
@@ -300,9 +293,21 @@ exports.setSubmitMessage = functions.https.onCall(async(data, context) => {
             });
 
         }
-        const ref = admin.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(chatId).doc()
-        const id = ref.id;
-        updateBatch.set(admin.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(chatId).doc(id), {
+
+        const senderRefMessage = userRef.doc(userMessagesId).collection(DB_MESSAGES);
+        const senderRefMessageDoc = senderRefMessage.doc();
+        const senderMsgid = senderRefMessageDoc.id;
+        updateBatch.set(senderRefMessage.doc(senderMsgid), {
+            name: context.auth.token.name,
+            text: text,
+            profilePicUrl: " ",
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        const receiverRefMessage = otherUserRef.doc(otherUserMessageId).collection(DB_MESSAGES);
+        const receiverRefMessageDoc = receiverRefMessage.doc();
+        const receiverMsgid = receiverRefMessageDoc.id;
+        updateBatch.set(receiverRefMessage.doc(receiverMsgid), {
             name: context.auth.token.name,
             text: text,
             profilePicUrl: " ",
@@ -312,11 +317,77 @@ exports.setSubmitMessage = functions.https.onCall(async(data, context) => {
         return updateBatch.commit().then(() => {
             return {
                 retCode: NO_ERR,
-                id: id
+                id: senderMsgid
             };
         }).catch(e => {
-            return { retCode: ERR_OTHR };
+            console.log(e);
+            return { retCode: ERR_WRITEDB };
         })
+    } else {
+        //chat doesn't exist
+        const userRefConvDoc = userRef.doc();
+        const userConvid = userRefConvDoc.id;
+        var setBatch = admin.firestore().batch();
+        setBatch.set(userRef.doc(userConvid), {
+            senderUid: userUid,
+            receiverUid: otherUserUid,
+            replied: 0,
+            displayName: otherUserName,
+            photoURL: otherUserPic,
+            lastMessage: text,
+            chatType: 0,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        const otherUserRefConvDoc = otherUserRef.doc();
+        const otherUserreceiverConvid = otherUserRefConvDoc.id;
+        setBatch.set(otherUserRef.doc(otherUserreceiverConvid), {
+            senderUid: userUid,
+            receiverUid: otherUserUid,
+            replied: 0,
+            displayName: userName,
+            photoURL: userPic,
+            lastMessage: text,
+            chatType: 1,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        if (chatType == 0) {
+            setBatch.update(admin.firestore().collection(DB_USERS).doc(otherUserUid), {
+                inboxNo: admin.firestore.FieldValue.increment(1)
+            });
+        }
+
+        const senderRefMessage = userRef.doc(userConvid).collection(DB_MESSAGES);
+        const senderRefMessageDoc = senderRefMessage.doc();
+        const senderMsgid = senderRefMessageDoc.id;
+        setBatch.set(senderRefMessage.doc(senderMsgid), {
+            name: context.auth.token.name,
+            text: text,
+            profilePicUrl: " ",
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        const receiverRefMessage = otherUserRef.doc(otherUserreceiverConvid).collection(DB_MESSAGES);
+        const receiverRefMessageDoc = receiverRefMessage.doc();
+        const receiverMsgid = receiverRefMessageDoc.id;
+        setBatch.set(receiverRefMessage.doc(receiverMsgid), {
+            name: context.auth.token.name,
+            text: text,
+            profilePicUrl: " ",
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        return setBatch.commit().then(() => {
+            return {
+                retCode: NO_ERR,
+                id: senderMsgid
+            };
+        }).catch(e => {
+            console.log(e);
+            return { retCode: ERR_WRITEDB };
+        })
+
     }
 
 });

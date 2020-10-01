@@ -50,7 +50,7 @@ var PEOPLE_CARD =
 
 function inboxGetChats() {
     var getChats = firebase.functions().httpsCallable('getChats');
-    getChats({ data: _userUid }).then(function(result) {
+    getChats({ data: _userDisplayName }).then(function(result) {
         result.data.forEach(element => {
             inboxDisplayChats(element.elementId, element.userName, element.lastMessage, element.photoURL, element.chatType, element.replied, element.timestamp);
             console.log(element.lastMessage)
@@ -188,6 +188,7 @@ function messageDisplayMessages(elementId, date, displayName,
 function messageSendMessage() {
 
     if (parseInt($("#message-word-count").text()) <= 80) {
+        console.log(sessionStorage.getItem('chatType'));
         var setSubmitMessage = firebase.functions().httpsCallable('setSubmitMessage');
         setSubmitMessage({
             displayName: sessionStorage.getItem('displayName'),
@@ -208,6 +209,9 @@ function messageSendMessage() {
                     break;
                 case ERR_OTHR:
                     console.log("sent failure");
+                    break;
+                case ERR_WRITEDB:
+                    console.log("sent to database failure");
                     break;
                 default:
                     console.log("sent failure, unspecified issue");
