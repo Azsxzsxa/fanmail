@@ -16,23 +16,6 @@ const ERR_WRITEDB = 103;
 const ERR_WORDLIMIT = 101;
 const ERR_INBOXLIMIT = 102;
 
-
-// Adds a message that welcomes new users into the chat.
-// exports.addWelcomeMessages = functions.auth.user().onCreate(async (user) => {
-//     console.log('A new user signed in for the first time.');
-//     const fullName = user.displayName || 'Anonymous';
-
-//     // Saves the new welcome message into the database
-//     // which then displays it in the FriendlyChat clients.
-//     await admin.firestore().collection('messages').add({
-//       name: 'Firebase Bot',
-//       profilePicUrl: '/images/firebase-logo.png', // Firebase logo
-//       text: `${fullName} signed in for the first time! Welcome!`,
-//       timestamp: admin.firestore.FieldValue.serverTimestamp(),
-//     });
-//     console.log('Welcome message written to database.');
-//   });
-
 exports.getProfile = functions.https.onCall(async(data, context) => {
     const uId = data.data;
     const userRef = admin.firestore().collection(DB_USERS).doc(uId);
@@ -92,6 +75,7 @@ exports.getChats = functions.https.onCall(async(data, context) => {
 exports.getMessages = functions.https.onCall(async(data, context) => {
     const displayName = data.data;
     const chatType = data.chatType;
+    const userUid = context.auth.uid;
     const otherUserRef = admin.firestore().collection(DB_USERS);
     console.log('look for displayName:' + displayName);
     const snapshotUsr = await otherUserRef.where('displayName', '==', displayName).get();
@@ -99,48 +83,98 @@ exports.getMessages = functions.https.onCall(async(data, context) => {
         console.log('No matching documents.');
         return;
     }
-    var chatId;
+
     var otherUserName;
     var otherUserDescr;
     var otherUserPic;
+    var otherUserUid;
     snapshotUsr.forEach(doc => {
-        if (chatType == 0) {
-            chatId = context.auth.uid.concat(doc.id);
-        } else {
-            chatId = doc.id.concat(context.auth.uid);
-        }
+        otherUserUid = doc.id;
         otherUserName = doc.data().displayName;
         otherUserDescr = doc.data().description;
         otherUserPic = doc.data().photoURL;
     });
 
-    const chatRef = admin.firestore().collection(DB_DATA).doc(DB_CONVERSATIONS).collection(chatId);
-    const snapshot = await chatRef.orderBy('timestamp', 'desc').limit(12).get();
+    const chatRef = admin.firestore().collection(DB_USERS).doc(userUid).collection(DB_CONVERSATIONS);
     var messageArray = new Array();
-    if (snapshot.empty) {
-        console.log('No matching conversation documents.');
-        return {
+    if (chatType == 0) {
+        const snapshot = await chatRef.where('receiverUid', '==', otherUserUid)
+            .get();
+        if (snapshot.empty) {
+            console.log('No matching conversation documents.');
+            return ERR_OTHR;
+        }
+        let messageRef;
+        snapshot.forEach(doc => {
+            if (doc.data().chatType == 0) {
+                messageRef = chatRef.doc(doc.id).collection(DB_MESSAGES);
+            }
+        });
+
+        const messageSnapShot = await messageRef
+            .orderBy('timestamp', 'desc')
+            .limit(12)
+            .get();
+
+        if (messageSnapShot.empty) {
             messageArray,
             otherUserName,
             otherUserDescr,
             otherUserPic
-        };
-    }
-    snapshot.forEach(doc => {
-        messageArray.push({
-            elementId: doc.id,
-            timestamp: doc.data().timestamp,
-            displayName: doc.data().name,
-            text: doc.data().text,
-            photoURL: doc.data().profilePicUrl
+        }
+        messageSnapShot.forEach(doc => {
+            messageArray.push({
+                elementId: doc.id,
+                timestamp: doc.data().timestamp,
+                displayName: doc.data().name,
+                text: doc.data().text,
+                photoURL: doc.data().profilePicUrl
+            });
         });
-    });
+
+    } else {
+        //chat type 1
+        const snapshot = await chatRef.where('senderUid', '==', otherUserUid)
+            .get();
+        if (snapshot.empty) {
+            console.log('No matching conversation documents.');
+            return ERR_OTHR;
+        }
+        let messageRef
+        snapshot.forEach(doc => {
+            if (doc.data().chatType == 1) {
+                messageRef = chatRef.doc(doc.id).collection(DB_MESSAGES);
+            }
+        });
+
+        const messageSnapShot = await messageRef
+            .orderBy('timestamp', 'desc')
+            .limit(12)
+            .get();
+
+        if (messageSnapShot.empty) {
+            messageArray,
+            otherUserName,
+            otherUserDescr,
+            otherUserPic
+        }
+        messageSnapShot.forEach(doc => {
+            messageArray.push({
+                elementId: doc.id,
+                timestamp: doc.data().timestamp,
+                displayName: doc.data().name,
+                text: doc.data().text,
+                photoURL: doc.data().profilePicUrl
+            });
+        });
+    }
     return {
         messageArray,
         otherUserName,
         otherUserDescr,
         otherUserPic
     };
+
 });
 
 
@@ -394,7 +428,6 @@ exports.setSubmitMessage = functions.https.onCall(async(data, context) => {
 
 
 
-
 exports.adminSet = functions.https.onCall(async(data, context) => {
     var access = "79.117.182.138".localeCompare(data.ip);
     if (access == 0) {
@@ -415,8 +448,3 @@ exports.adminSet = functions.https.onCall(async(data, context) => {
     }
 
 });
-
-
-// TODO(DEVELOPER): Write the blurOffensiveImages Function here.
-
-// TODO(DEVELOPER): Write the sendNotifications Function here.
